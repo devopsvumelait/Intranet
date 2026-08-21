@@ -1,0 +1,138 @@
+﻿@model List<Intranet.Models.Request>
+
+<div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr class="text-muted small text-uppercase position-sticky top-0" style="z-index: 1;">
+                <th class="ps-4">Req #</th>
+                <th>Date Submitted</th>
+                <th>Requester</th>
+                <th>Supplier</th>
+                <th>Department</th>
+                <th>Quote Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th class="text-end pe-4">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted small">
+                        <i class="bi bi-inbox d-block display-6 text-muted opacity-50 mb-2"></i>
+                        No requests found in this category segment.
+                    </td>
+                </tr>
+            }
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="ps-4 text-muted small">#@item.Id</td>
+                    <td class="small text-muted">@item.CreatedAt?.ToString("yyyy-MM-dd HH:mm")</td>
+                    <td class="small">@item.Requester?.FirstName @item.Requester?.Surname</td>
+                    
+                    <td class="fw-bold text-dark">
+                        @(item.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "No Vendor Marked")
+                    </td>
+                    
+                    <td>
+                        <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.DepartmentType</div>
+                    </td>
+                    <td>
+                        <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.QuoteType</div>
+                    </td>
+                    <td class="fw-bold text-dark">R @item.TotalAmount.ToString("N2")</td>
+                    <td>
+                        
+                        @if (item.Status == "Awaiting_Payment")
+                        {
+                            <span class="badge @(item.IsOverdue ? "bg-danger" : "bg-info text-dark") px-2.5 py-1.5 rounded-pill small">
+                                Awaiting Payment
+                            </span>
+                        }
+                        else if (item.Status == "Awaiting_Invoice")
+                        {
+                            <span class="badge bg-warning text-dark px-2.5 py-1.5 rounded-pill small">Awaiting Invoice</span>
+                        }
+                        else if (item.Status == "PO_Issued" || item.Status == "Awaiting_Manager_Closure")
+                        {
+                            <span class="badge bg-gradient-orange text-dark px-2.5 py-1.5 rounded-pill small" style="background-color: rgba(255, 159, 67, 0.2); border: 1px solid #ff9f43;">
+                                Awaiting Manager Sign-Off
+                            </span>
+                        }
+                        else if (item.Status == "Awaiting_Verification")
+                        {
+                            <span class="badge bg-primary px-2.5 py-1.5 rounded-pill small">Awaiting Verify</span>
+                        }
+                        else if (item.Status == "PO_Upload")
+                        {
+                            <span class="badge bg-secondary px-2.5 py-1.5 rounded-pill small">PO Upload Pending</span>
+                        }
+                        else if (item.Status == "PO_Payment_Queue")
+                        {
+                            <span class="badge bg-warning text-dark border-warning px-2 py-1">
+                                <i class="bi bi-calendar-event me-1"></i> Auto-Pays on 1st of Next Month
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-dark px-2.5 py-1.5 rounded-pill small">@item.Status</span>
+                        }
+                    </td>
+                    <td class="text-end pe-4">
+                        
+                        @if (item.Status == "Awaiting_Manager_Closure")
+                        {
+                            <button class="btn btn-sm btn-outline-warning fw-bold" disabled>
+                                <i class="bi bi-clock me-1"></i> Out with Manager
+                            </button>
+                            <a asp-page="/Procurement/Manager/Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary fw-bold">
+                                View Details
+                            </a>
+                        }
+                        else if ((item.RequestType == "Waybill" || item.RequestType == "ONLINE") && item.Status != "Closed")
+                        {
+                            <a asp-page="/Procurement/Finance/UploadPOP" asp-route-id="@item.Id" class="btn btn-sm btn-success fw-bold shadow-sm">
+                                <i class="bi bi-cash-stack me-1"></i> Process @item.RequestType
+                            </a>
+                        }
+                        else if (item.Status == "Awaiting_Payment")
+                        {
+                            <a asp-page="/Procurement/Finance/UploadPOP" asp-route-id="@item.Id" class="btn btn-sm btn-success fw-bold shadow-sm">
+                                <i class="bi bi-cash-stack me-1"></i> Process Payment
+                            </a>
+                        }
+                        else if (item.Status == "Awaiting_Verification")
+                        {
+                            <a asp-page="/Procurement/Finance/VerifyClosure" asp-route-id="@item.Id" class="btn btn-sm btn-dark fw-bold shadow-sm">
+                                <i class="bi bi-shield-check me-1"></i> Verify & Close
+                            </a>
+                        }
+                        else if (item.Status == "PO_Payment_Queue")
+                        {
+                            <a asp-page="/Procurement/Manager/Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary">
+                                View Details
+                            </a>
+                        }
+                        else if (item.Status == "PO_Upload")
+                        {
+                        
+                        <a asp-page="/Procurement/Finance/UploadPOP"
+                               asp-route-id="@item.Id"
+                               class="btn btn-sm btn-primary shadow-sm fw-bold">
+                            <i class="bi bi-file-earmark-arrow-up me-1"></i> Upload PO
+                        </a>
+                        }
+                        else
+                        {
+                            <a asp-page="/Procurement/Manager/Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary fw-bold">
+                                View Details
+                            </a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

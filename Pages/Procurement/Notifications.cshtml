@@ -1,0 +1,322 @@
+﻿@page
+@model Intranet.Pages.Procurement.NotificationsModel
+@{
+    ViewData["Title"] = "Notification Center";
+    
+    // Role-based target link generation matching your Layout routing
+    var detailLink = "/Procurement/Manager/Details";
+    if (User.IsInRole("Executive") || User.IsInRole("HOO") || User.IsInRole("HOS") || User.IsInRole("MD"))
+    {
+        detailLink = "/Procurement/Approvals/Review";
+    }
+    else if (User.IsInRole("Finance"))
+    {
+        detailLink = "/Procurement/Finance/Details";
+    }
+
+    var unreadCount = Model.Notifications.Count(n => !n.IsRead);
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-9 col-xl-8">
+        
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4 pb-3 border-bottom">
+            <div>
+                <h2 class="fw-bold tracking-tight text-dark mb-1">Notification Center</h2>
+                <p class="text-muted mb-0">Track updates, system requests, and approval actions.</p>
+            </div>
+            @if (unreadCount > 0)
+            {
+                <form method="post" asp-page-handler="MarkAllRead" asp-route-returnUrl="@Request.Path">
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 py-2 shadow-sm d-inline-flex align-items-center font-weight-600 transition-base">
+                        <i class="bi bi-check-all fs-5 me-1"></i> Mark All as Read
+                    </button>
+                </form>
+            }
+        </div>
+
+        <ul class="nav nav-pills gap-2 mb-4 bg-light p-1 rounded-3 d-inline-flex border" id="notifTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-2 px-3 py-2 font-weight-600" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-panel" type="button" role="tab">
+                    All Activity
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-2 px-3 py-2 font-weight-600 position-relative d-flex align-items-center gap-2" id="unread-tab" data-bs-toggle="tab" data-bs-target="#unread-panel" type="button" role="tab">
+                    Unread
+                    @if (unreadCount > 0)
+                    {
+                        <span class="badge rounded-pill bg-danger" style="font-size: 0.75rem;">@unreadCount</span>
+                    }
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-2 px-3 py-2 font-weight-600" id="read-tab" data-bs-toggle="tab" data-bs-target="#read-panel" type="button" role="tab">
+                    Archived
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content border-0" id="notifTabsContent">
+            
+            <div class="tab-pane fade show active" id="all-panel" role="tabpanel">
+                @if (!Model.Notifications.Any())
+                {
+                    <div class="text-center py-5 bg-white border rounded-4 shadow-sm my-2 text-muted">
+                        <div class="icon-circle bg-light text-muted mx-auto mb-3">
+                            <i class="bi bi-bell-slash fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">Your inbox is clear</h5>
+                        <p class="small text-muted mb-0">No new or historic notification instances discovered.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var n in Model.Notifications)
+                        {
+                            <a href="@Url.Page(detailLink, new { id = n.RequestId })" class="notification-card card border-1 rounded-4 shadow-sm text-decoration-none transition-base @(n.IsRead ? "bg-white border-light text-muted opacity-85" : "bg-white border-start-primary border-4 text-dark")">
+                                <div class="card-body p-3.5 d-flex gap-3 align-items-start">
+                                    <div class="icon-circle flex-shrink-0 @(n.IsRead ? "bg-light text-secondary" : "bg-primary-subtle text-primary")">
+                                        <i class="bi @(n.IsRead ? "bi-envelope-open" : "bi-envelope-fill") fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 pe-2">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-baseline mb-1">
+                                            <h6 class="mb-0 fw-bold @(n.IsRead ? "text-secondary" : "text-dark-card")">@n.Title</h6>
+                                            <span class="text-muted font-size-xs d-flex align-items-center gap-1 mt-1 mt-sm-0">
+                                                <i class="bi bi-clock"></i> @(n.CreatedAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")
+                                            </span>
+                                        </div>
+                                        <p class="mb-0 text-wrap font-size-sm lh-sm @(n.IsRead ? "text-muted" : "text-secondary")">@n.Message</p>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                                        @if (!n.IsRead)
+                                        {
+                                            <form method="post" asp-page-handler="MarkSingleRead" asp-route-notificationId="@n.Id" class="stop-prop m-0">
+                                                <button type="submit" class="btn btn-icon btn-light rounded-circle" title="Mark as read">
+                                                    <i class="bi bi-check-lg text-success"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                        <i class="bi bi-chevron-right text-muted font-size-sm ps-1 transition-arrow"></i>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="tab-pane fade" id="unread-panel" role="tabpanel">
+                @if (unreadCount == 0)
+                {
+                    <div class="text-center py-5 bg-white border rounded-4 shadow-sm my-2 text-muted">
+                        <div class="icon-circle bg-success-subtle text-success mx-auto mb-3">
+                            <i class="bi bi-check2-all fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">All caught up!</h5>
+                        <p class="small text-muted mb-0">You do not have any fresh unread alerts pending view.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var n in Model.Notifications.Where(n => !n.IsRead))
+                        {
+                            <a href="@Url.Page(detailLink, new { id = n.RequestId })" class="notification-card card border-1 rounded-4 shadow-sm text-decoration-none border-start-primary border-4 text-dark transition-base">
+                                <div class="card-body p-3.5 d-flex gap-3 align-items-start">
+                                    <div class="icon-circle flex-shrink-0 bg-primary-subtle text-primary">
+                                        <i class="bi bi-envelope-fill fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 pe-2">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-baseline mb-1">
+                                            <h6 class="mb-0 fw-bold text-dark-card">@n.Title</h6>
+                                            <span class="text-muted font-size-xs d-flex align-items-center gap-1 mt-1 mt-sm-0">
+                                                <i class="bi bi-clock"></i> @(n.CreatedAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")
+                                            </span>
+                                        </div>
+                                        <p class="mb-0 text-wrap font-size-sm lh-sm text-secondary">@n.Message</p>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-shrink-0 ms-auto">
+                                        <form method="post" asp-page-handler="MarkSingleRead" asp-route-notificationId="@n.Id" class="stop-prop m-0">
+                                            <button type="submit" class="btn btn-icon btn-light rounded-circle" title="Mark as read">
+                                                <i class="bi bi-check-lg text-success"></i>
+                                            </button>
+                                        </form>
+                                        <i class="bi bi-chevron-right text-muted font-size-sm ps-1 transition-arrow"></i>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="tab-pane fade" id="read-panel" role="tabpanel">
+                @if (!Model.Notifications.Any(n => n.IsRead))
+                {
+                    <div class="text-center py-5 bg-white border rounded-4 shadow-sm my-2 text-muted">
+                        <div class="icon-circle bg-light text-muted mx-auto mb-3">
+                            <i class="bi bi-archive fs-3"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">History is empty</h5>
+                        <p class="small text-muted mb-0">Items you read will safely group right inside here later.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var n in Model.Notifications.Where(n => n.IsRead))
+                        {
+                            <a href="@Url.Page(detailLink, new { id = n.RequestId })" class="notification-card card border-1 border-light rounded-4 shadow-sm text-decoration-none text-muted opacity-85 transition-base bg-white">
+                                <div class="card-body p-3.5 d-flex gap-3 align-items-start">
+                                    <div class="icon-circle flex-shrink-0 bg-light text-secondary">
+                                        <i class="bi bi-envelope-open fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1 pe-2">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-baseline mb-1">
+                                            <h6 class="mb-0 fw-bold text-secondary">@n.Title</h6>
+                                            <span class="text-muted font-size-xs d-flex align-items-center gap-1 mt-1 mt-sm-0">
+                                                <i class="bi bi-clock"></i> @(n.CreatedAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")
+                                            </span>
+                                        </div>
+                                        <p class="mb-0 text-wrap font-size-sm lh-sm text-muted">@n.Message</p>
+                                    </div>
+                                    <div class="d-flex align-items-center flex-shrink-0 ms-auto">
+                                        <i class="bi bi-chevron-right text-muted font-size-sm ps-1 transition-arrow"></i>
+                                    </div>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Intercept inline custom processing form actions cleanly
+        document.querySelectorAll('.stop-prop').forEach(form => {
+            form.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+    <style>
+        /* Utility Visual Architecture Rules */
+        .transition-base {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .font-weight-600 {
+            font-weight: 600;
+        }
+
+        .font-size-sm {
+            font-size: 0.875rem;
+        }
+
+        .font-size-xs {
+            font-size: 0.775rem;
+        }
+
+        .text-dark-card {
+            color: #1e293b;
+        }
+
+        .opacity-85 {
+            opacity: 0.85;
+        }
+
+        .p-3.5 {
+            padding: 1.15rem !important;
+        }
+
+        /* Modernized Component Variations */
+        .bg-light {
+            background-color: #f8fafc !important;
+        }
+
+        .border-start-primary {
+            border-left: 4px solid #0d6efd !important;
+        }
+
+        .bg-primary-subtle {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+        }
+
+        .bg-success-subtle {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+        }
+
+        /* Nav Pills Styling overrides */
+        .nav-pills .nav-link {
+            color: #64748b;
+            background: none;
+            transition: all 0.15s ease;
+        }
+
+            .nav-pills .nav-link:hover {
+                color: #1e293b;
+                background-color: #e2e8f0;
+            }
+
+            .nav-pills .nav-link.active {
+                color: #ffffff !important;
+                background-color: #0d6efd !important;
+                box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+            }
+
+        /* Round Accent Helpers */
+        .icon-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            transition: all 0.15s ease;
+        }
+
+            .btn-icon:hover {
+                background-color: #e2e8f0;
+                transform: scale(1.05);
+            }
+
+        /* Row Container Scaling Mechanics */
+        .notification-card {
+            transform: scale(1);
+        }
+
+            .notification-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02) !important;
+                border-color: #cbd5e1 !important;
+            }
+
+                .notification-card:hover .transition-arrow {
+                    transform: translateX(3px);
+                    color: #0d6efd !important;
+                }
+
+        .transition-arrow {
+            transition: transform 0.2s ease;
+        }
+    </style>
+}

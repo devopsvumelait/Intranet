@@ -1,0 +1,142 @@
+﻿@page "{id:int}"
+@model Intranet.Pages.Procurement.Finance.VerifyClosureModel
+@{
+    ViewData["Title"] = "Final Audit Verification";
+}
+
+<style>
+    .audit-card { border: 1px solid #e0e6ed; transition: transform 0.2s; }
+    .audit-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
+    .doc-preview-box { background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 8px; height: 160px; display: flex; align-items: center; justify-content: center; flex-direction: column; transition: all 0.2s; }
+    .doc-preview-box:hover { background: #fff; border-color: #0d6efd; }
+    .price-tag { font-family: 'Courier New', Courier, monospace; font-size: 1.1rem; }
+</style>
+
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Final Audit Verification</h2>
+            <p class="text-muted mb-0">Cross-reference the financial data before closing Request #@Model.Request.Id</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="row g-3">
+                <!-- Step 1: Quote -->
+                <div class="col-md-4">
+                    <div class="card h-100 audit-card shadow-sm border-top border-primary border-4">
+                        <div class="card-body">
+                            <h6 class="text-uppercase text-primary fw-bold small mb-3">1. Winning Quote</h6>
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Supplier</label>
+                                <span class="fw-bold">@Model.WinningQuote.SupplierName</span>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small d-block">Total</label>
+                                <span class="price-tag fw-bold">R @Model.WinningQuote.Price.ToString("N2")</span>
+                            </div>
+                            <a href="@Model.WinningQuote.BlobUrl" target="_blank" class="doc-preview-box text-decoration-none">
+                                <i class="bi bi-file-earmark-pdf text-danger fs-1"></i>
+                                <span class="text-dark small mt-2">View Quote</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Payment (Pulls Reference from Payment Table) -->
+                <div class="col-md-4">
+                    <div class="card h-100 audit-card shadow-sm border-top border-success border-4">
+                        <div class="card-body">
+                            <h6 class="text-uppercase text-success fw-bold small mb-3">2. Disbursement</h6>
+                            @if (Model.ProofOfPayment != null)
+                            {
+                                <div class="mb-3">
+                                    <label class="text-muted small d-block">Payment Date</label>
+                                    <span class="fw-bold">@Model.ProofOfPayment.UploadedAt?.ToString("yyyy-MM-dd")</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small d-block">Bank Reference</label>
+                                    <span class="price-tag fw-bold text-success">
+                                        @(Model.PaymentRecord?.ReferenceNumber ?? "REF-NOT-FOUND")
+                                    </span>
+                                </div>
+                                <a href="@Model.ProofOfPayment.BlobUrl" target="_blank" class="doc-preview-box text-decoration-none">
+                                    <i class="bi bi-shield-check text-success fs-1"></i>
+                                    <span class="text-dark small mt-2">View POP</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Final Invoice -->
+                <div class="col-md-4">
+                    <div class="card h-100 audit-card shadow-sm border-top border-dark border-4">
+                        <div class="card-body">
+                            <h6 class="text-uppercase text-dark fw-bold small mb-3">3. Final Invoice</h6>
+                            @if (Model.FinalInvoice != null)
+                            {
+                                <div class="mb-3">
+                                    <label class="text-muted small d-block">Uploaded Date</label>
+                                    <span class="fw-bold">@Model.FinalInvoice.UploadedAt?.ToString("yyyy-MM-dd")</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="text-muted small d-block">Status</label>
+                                    <span class="badge bg-dark">Received</span>
+                                </div>
+                                <a href="@Model.FinalInvoice.BlobUrl" target="_blank" class="doc-preview-box text-decoration-none bg-dark text-white border-0">
+                                    <i class="bi bi-file-earmark-medical fs-1 text-info"></i>
+                                    <span class="small mt-2">Open Invoice</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <div class="doc-preview-box border-danger">
+                                    <i class="bi bi-clock-history text-danger fs-1"></i>
+                                    <span class="text-danger small mt-2 fw-bold">Awaiting Invoice</span>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Actions -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <form method="post" asp-page-handler="CloseRequest" asp-route-id="@Model.Request.Id">
+                        <button type="submit" class="btn btn-success w-100 mb-2 py-2 fw-bold @(Model.FinalInvoice == null ? "disabled" : "")">
+                            <i class="bi bi-check-all me-1"></i> Approve & Close
+                        </button>
+                    </form>
+                    <button type="button" class="btn btn-outline-danger w-100 py-2 fw-bold" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                        <i class="bi bi-x-circle me-1"></i> Reject Invoice
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" asp-page-handler="RejectInvoice" asp-route-id="@Model.Request.Id">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reason for Rejection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea name="reason" class="form-control" rows="4" required placeholder="Describe what is wrong with the invoice..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Confirm Rejection</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

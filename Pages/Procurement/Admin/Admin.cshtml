@@ -1,0 +1,476 @@
+﻿@page
+@model Intranet.Pages.Procurement.AdminModel
+
+<style>
+    .scrollable-table-container {
+        max-height: 450px;
+        overflow-y: auto;
+    }
+</style>
+
+<div class="container-fluid py-4">
+
+    <!-- HEADER -->
+    <div class="card shadow-sm mb-4 bg-dark text-white">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">👋 Welcome, @Model.UserFullName</h4>
+            <div id="dateTime" class="fw-bold"></div>
+        </div>
+    </div>
+
+    <script>
+            function updateDateTime() {
+                const now = new Date();
+                const dateTimeEl = document.getElementById("dateTime");
+                if (dateTimeEl) {
+                    dateTimeEl.innerText = now.toLocaleDateString() + " " + now.toLocaleTimeString();
+                }
+            }
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+
+            function addRoleRow(containerId, rolesData) {
+                const container = document.getElementById(containerId);
+                const rowDiv = document.createElement("div");
+                rowDiv.className = "input-group mb-2 role-row";
+
+                let optionsHtml = '<option value="">-- Select Role --</option>';
+                rolesData.forEach(r => {
+                    optionsHtml += `<option value="${r.Id}">${r.RoleName}</option>`;
+                });
+
+                rowDiv.innerHTML = `
+                    <select name="roleIds" class="form-select" required>
+                        ${optionsHtml}
+                    </select>
+                    <button type="button" class="btn btn-outline-danger" onclick="this.closest('.role-row').remove()">×</button>
+                `;
+                container.appendChild(rowDiv);
+            }
+
+            function addRoleRowFromButton(containerId, buttonElement) {
+                const rolesJson = buttonElement.getAttribute('data-roles');
+                const rolesData = JSON.parse(rolesJson);
+                addRoleRow(containerId, rolesData);
+            }
+    </script>
+
+    <!-- ALERTS -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- ACTION BUTTONS -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body d-flex gap-2">
+
+            <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#createUserModal">
+                + Create User
+            </button>
+
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createRoleModal">
+                + Create Role
+            </button>
+
+        </div>
+    </div>
+
+    <!-- ================= USERS FILTERS ================= -->
+    <form method="get" class="card p-3 mb-3">
+
+        <div class="row g-2">
+
+            <div class="col-md-4">
+                <input asp-for="SearchTerm" class="form-control" placeholder="Search ID, name or email..." />
+            </div>
+
+            <div class="col-md-3">
+                <select asp-for="DepartmentFilter" class="form-select">
+                    <option value="">All Departments</option>
+                    @foreach (var d in Model.Departments)
+                    {
+                        <option value="@d.Id">@d.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select asp-for="RoleFilter" class="form-select">
+                    <option value="">All Roles</option>
+                    @foreach (var r in Model.Roles)
+                    {
+                        <option value="@r.Id">@r.RoleName</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select asp-for="StatusFilter" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+
+        </div>
+
+        <div class="mt-2 d-flex gap-2">
+            <button class="btn btn-dark btn-sm">Search</button>
+            <a asp-page="./Admin" class="btn btn-outline-secondary btn-sm">Reset</a>
+        </div>
+
+    </form>
+
+    <!-- USERS TABLE -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white">Users Management</div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive scrollable-table-container">
+                <table class="table table-hover table-striped mb-0">
+
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Password</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var u in Model.Users)
+                        {
+                            var rowId = "u_" + u.Id;
+                            var rolesContainerId = "roles_container_" + u.Id;
+
+                            <tr>
+                                <td>@u.Id</td>
+                                <td>@u.FirstName @u.Surname</td>
+                                <td>@u.Email</td>
+                                <td>@Model.Departments.FirstOrDefault(d => d.Id == u.DepartmentId)?.Name</td>
+
+                                <td>
+                                    <span class="badge @(u.IsActive ? "bg-success" : "bg-secondary")">
+                                        @(u.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="badge @(u.MustChangePassword ? "bg-warning text-dark" : "bg-success")">
+                                        @(u.MustChangePassword ? "Temp" : "Set")
+                                    </span>
+                                </td>
+
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="collapse"
+                                            data-bs-target="#@rowId">
+                                        Edit
+                                    </button>
+
+                                    <button class="btn btn-sm btn-dark"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#reset_@u.Id">
+                                        Reset
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- EDIT ROW -->
+                            <tr class="collapse bg-light" id="@rowId">
+                                <td colspan="7">
+
+                                    <form method="post" asp-page-handler="UpdateUser">
+
+                                        <input type="hidden" name="id" value="@u.Id" />
+
+                                        <div class="row g-2">
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">First Name</label>
+                                                <input name="firstName" value="@u.FirstName" class="form-control" />
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">Surname</label>
+                                                <input name="surname" value="@u.Surname" class="form-control" />
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">Email</label>
+                                                <input name="email" value="@u.Email" class="form-control" />
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">Department</label>
+                                                <select name="departmentId" class="form-select">
+                                                    @foreach (var d in Model.Departments)
+                                                    {
+                                                        <option value="@d.Id" selected="@(u.DepartmentId == d.Id)">
+                                                            @d.Name
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </div>
+
+                                            <!-- MULTI-ROLE SECTION -->
+                                            <div class="col-md-6">
+                                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                                    <label class="form-label mb-0">Roles</label>
+                                                    <button type="button" class="btn btn-sm btn-dark"
+                                                            data-roles='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Roles.Select(r => new { r.Id, r.RoleName })))'
+                                                            onclick="addRoleRowFromButton('@rolesContainerId', this)">
+                                                        + Add Role
+                                                    </button>
+                                                </div>
+
+                                                <div id="@rolesContainerId">
+                                                    @if (u.UserRoles != null && u.UserRoles.Any())
+                                                    {
+                                                        foreach (var ur in u.UserRoles)
+                                                        {
+                                                            <div class="input-group mb-2 role-row">
+                                                                <select name="roleIds" class="form-select" required>
+                                                                    <option value="">-- Select Role --</option>
+                                                                    @foreach (var r in Model.Roles)
+                                                                    {
+                                                                        <option value="@r.Id" selected="@(ur.RoleId == r.Id)">
+                                                                            @r.RoleName
+                                                                        </option>
+                                                                    }
+                                                                </select>
+                                                                <button type="button" class="btn btn-outline-danger" onclick="this.closest('.role-row').remove()">×</button>
+                                                            </div>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="input-group mb-2 role-row">
+                                                            <select name="roleIds" class="form-select" required>
+                                                                <option value="">-- Select Role --</option>
+                                                                @foreach (var r in Model.Roles)
+                                                                {
+                                                                    <option value="@r.Id">@r.RoleName</option>
+                                                                }
+                                                            </select>
+                                                            <button type="button" class="btn btn-outline-danger" onclick="this.closest('.role-row').remove()">×</button>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-3">
+                                                <label class="form-label">Status</label>
+                                                <select name="isActive" class="form-select">
+                                                    <option value="true" selected="@u.IsActive">Active</option>
+                                                    <option value="false" selected="@(!u.IsActive)">Inactive</option>
+                                                </select>
+                                            </div>
+
+                                        </div>
+
+                                        <button class="btn btn-primary btn-sm mt-2">Save</button>
+
+                                    </form>
+
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= REQUEST FILTERS ================= -->
+    <form method="get" class="card p-3 mb-3">
+
+        <div class="row g-2">
+
+            <div class="col-md-6">
+                <input asp-for="RequestSearch" class="form-control"
+                       placeholder="Search request description..." />
+            </div>
+
+            <div class="col-md-4">
+                <select asp-for="StatusFilter" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-dark w-100">Search</button>
+            </div>
+
+        </div>
+
+    </form>
+
+    <!-- REQUESTS TABLE -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">Requests</div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive scrollable-table-container">
+                <table class="table mb-0">
+
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th>ID</th>
+                            <th>Description</th>
+                            <th>Requester</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var r in Model.Requests)
+                        {
+                            <tr>
+                                <td>#@r.Id</td>
+                                <td>@r.Description</td>
+                                <td>@r.Requester?.FirstName @r.Requester?.Surname</td>
+                                <td>@r.Status</td>
+                                <td>@r.CreatedAt</td>
+
+                                <td class="text-end">
+                                    @if (r.Status != "Cancelled")
+                                    {
+                                        <form method="post" asp-page-handler="CancelRequest">
+                                            <input type="hidden" name="id" value="@r.Id" />
+                                            <button class="btn btn-danger btn-sm">Cancel</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- CREATE USER MODAL -->
+<div class="modal fade" id="createUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="post" asp-page-handler="CreateUser">
+
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Create User</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <input asp-for="Email" class="form-control mb-2" placeholder="Email" />
+                    <input asp-for="FirstName" class="form-control mb-2" placeholder="First Name" />
+                    <input asp-for="Surname" class="form-control mb-2" placeholder="Surname" />
+
+                    <select asp-for="DepartmentId" class="form-select mb-2">
+                        <option value="">-- Select Department --</option>
+                        @foreach (var d in Model.Departments)
+                        {
+                            <option value="@d.Id">@d.Name</option>
+                        }
+                    </select>
+
+                    <select asp-for="RoleId" class="form-select" required>
+                        <option value="">-- Select Role --</option>
+                        @foreach (var r in Model.Roles)
+                        {
+                            <option value="@r.Id">@r.RoleName</option>
+                        }
+                    </select>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-dark">Create User</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- CREATE ROLE MODAL -->
+<div class="modal fade" id="createRoleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <form method="post" asp-page-handler="CreateRole">
+
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Create Role</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input asp-for="NewRoleName" class="form-control" placeholder="Role Name" />
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button class="btn btn-primary">Create</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- RESET PASSWORD MODALS -->
+@foreach (var u in Model.Users)
+{
+    <div class="modal fade" id="reset_@u.Id" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+
+                <form method="post" asp-page-handler="ResetPassword">
+                    <input type="hidden" name="ResetUserId" value="@u.Id" />
+
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title">Reset Password: @u.FirstName @u.Surname</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        <label class="form-label">Temporary Password</label>
+                        <input type="text" name="TempPassword" class="form-control" required placeholder="Enter new temp password" />
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-dark">Reset Password</button>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+}

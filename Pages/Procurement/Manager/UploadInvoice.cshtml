@@ -1,0 +1,59 @@
+﻿@page "{id:int}"
+@model Intranet.Pages.Procurement.Manager.UploadInvoiceModel
+@{
+    bool isPO = Model.RequestData?.IsPoRequired ?? false;
+    ViewData["Title"] = "Upload Invoice";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm border-top @(isPO ? "border-primary" : "border-danger") border-4">
+                <div class="card-body p-4">
+                    <h4 class="fw-bold">Final Step: Upload Tax Invoice</h4>
+                    
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger shadow-sm border-start border-4 border-danger">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-x-circle-fill me-3 fs-4"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Incorrect Invoice Uploaded</h6>
+                                    <p class="mb-0 small">The document contents do not match our system reference file properties or authorized parameters.</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <p class="text-muted small">
+                        @if (isPO)
+                        {
+                            <span>Finance has successfully generated the corporate Purchase Order for Request #@Model.RequestData.Id. Please upload the supplier's matching Tax Invoice below.</span>
+                        }
+                        else
+                        {
+                            <span>Finance has processed the cash payment execution run for Request #@Model.RequestData.Id. Please upload the final invoice received from the supplier.</span>
+                        }
+                    </p>
+                    
+                    <div class="alert alert-info py-2 small">
+                        <strong>Expected Supplier:</strong> @(Model.RequestData?.Quotes?.FirstOrDefault()?.SupplierName ?? "Unknown Vendor")
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Select Invoice (PDF)</label>
+                            <input asp-for="InvoiceFile" type="file" class="form-control" accept=".pdf" required />
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn @(isPO ? "btn-primary" : "btn-danger") py-2 fw-bold">
+                                @(isPO ? "Submit to Corporate Account" : "Submit to Finance")
+                            </button>
+                            <a asp-page="./MyRequests" class="btn btn-light">Back</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

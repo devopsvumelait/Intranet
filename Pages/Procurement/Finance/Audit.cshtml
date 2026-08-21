@@ -1,0 +1,257 @@
+﻿@page
+@model Intranet.Pages.Procurement.Finance.AuditModel
+@{
+    ViewData["Title"] = "Payment & Audit Archive";
+}
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0 fw-bold">Payment & Audit Archive</h5>
+                <p class="text-muted small mb-0">Cross-verify matching documents for operational compliance audits.</p>
+            </div>
+        </div>
+            <form method="get">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Keyword Search</label>
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" name="SearchTerm" value="@Model.SearchTerm"
+                                   class="form-control border-start-0" placeholder="Search ID, Supplier Name, Motivation, Customer Name or Requester...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Final Status</label>
+                        <select name="StatusFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Pending" selected="@(Model.StatusFilter == "Pending")">Pending</option>
+                            <option value="PO_Payment_Queue" selected="@(Model.StatusFilter == "PO_Payment_Queue")">PO Payment Queue</option>
+                            <option value="Closed" selected="@(Model.StatusFilter == "Closed")">Closed / Paid</option>
+                            <option value="Rejected" selected="@(Model.StatusFilter == "Rejected")">Rejected / Denied</option>
+
+                        </select>
+                    </div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Department</label>
+                        <select name="DepartmentFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="EUC" selected="@(Model.DepartmentFilter == "EUC")">EUC</option>
+                            <option value="Networks" selected="@(Model.DepartmentFilter == "Networks")">Networks</option>
+                            <option value="Cabling" selected="@(Model.DepartmentFilter == "Cabling")">Cabling</option>
+                            <option value="ADHOC" selected="@(Model.DepartmentFilter == "ADHOC")">ADHOC</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Cost Type</label>
+                        <select name="CostTypeFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="BAU" selected="@(Model.CostTypeFilter == "BAU")">BAU</option>
+                            <option value="Projects" selected="@(Model.CostTypeFilter == "Projects")">Projects</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Request Type</label>
+                        <select name="RequestTypeFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Normal" selected="@(Model.RequestTypeFilter == "Normal")">Normal</option>
+                            <option value="Online" selected="@(Model.RequestTypeFilter == "Online")">Online</option>
+                            <option value="Waybill" selected="@(Model.RequestTypeFilter == "Waybill")">Waybill</option>
+                            <option value="PO" selected="@(Model.RequestTypeFilter == "PO")">PO</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Quote Type</label>
+                        <select name="QuoteTypeFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Accomodation" selected="@(Model.QuoteTypeFilter == "Accomodation")">Accomodation</option>
+                            <option value="Courier" selected="@(Model.QuoteTypeFilter == "Courier")">Courier</option>
+                            <option value="Flights" selected="@(Model.QuoteTypeFilter == "Flights")">Flights</option>
+                            <option value="Fuel" selected="@(Model.QuoteTypeFilter == "Fuel")">Fuel</option>
+                            <option value="Health And Safety" selected="@(Model.QuoteTypeFilter == "Health and Safety")">Health and Safety</option>
+                            <option value="Legal Fees" selected="@(Model.QuoteTypeFilter == "Legal Fees")">Legal Fees</option>
+                            <option value="Medicals" selected="@(Model.QuoteTypeFilter == "Medicals")">Medicals</option>
+                            <option value="Networking Expense" selected="@(Model.QuoteTypeFilter == "Networking Expense")">Networking Expense</option>
+                            <option value="PPE" selected="@(Model.QuoteTypeFilter == "PPE")">PPE</option>
+                            <option value="S&T" selected="@(Model.QuoteTypeFilter == "S&T")">S&T</option>
+                            <option value="Security Clearance" selected="@(Model.QuoteTypeFilter == "Security Clearance")">Security Clearance</option>
+                            <option value="Small Assets" selected="@(Model.QuoteTypeFilter == "Small Assets")">Small Assets</option>
+                            <option value="Staff Welfare" selected="@(Model.QuoteTypeFilter == "Staff Welfare")">Staff Welfare</option>
+                            <option value="Team Builds" selected="@(Model.QuoteTypeFilter == "Team Builds")">Team Builds</option>
+                            <option value="Telephone And Internet" selected="@(Model.QuoteTypeFilter == "Telephone And Internet")">Telephone And Internet</option>
+                            <option value="Tool Hire" selected="@(Model.QuoteTypeFilter == "Tool Hire")">Tool Hire</option>
+                            <option value="Training" selected="@(Model.QuoteTypeFilter == "Training")">Training</option>
+                            <option value="Vehicle  Expense" selected="@(Model.QuoteTypeFilter == "Vehicle Expense")">Vehicle Expense</option>
+                            <option value="Vehicle Hire" selected="@(Model.QuoteTypeFilter == "Vehicle Hire")">Vehicle Hire</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Start Date</label>
+                        <input type="date" name="StartDate" value="@Model.StartDate?.ToString("yyyy-MM-dd")" class="form-control shadow-sm">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase">End Date</label>
+                        <input type="date" name="EndDate" value="@Model.EndDate?.ToString("yyyy-MM-dd")" class="form-control shadow-sm">
+                    </div>
+                </div>
+                <div class="row g-2 mt-2">
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-primary flex-grow-1 shadow-sm">
+                            <i class="bi bi-funnel me-1"></i> Filter
+                        </button>
+                        <a asp-page="/Procurement/Finance/Audit" class="btn btn-outline-secondary shadow-sm">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Clear
+                        </a>
+                    </div>
+                </div>
+            </form>
+
+        
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
+                <thead class="table-light small text-uppercase text-muted position-sticky top-0" style="z-index: 1;">
+                    <tr>
+                        <th class="ps-4">Request #</th>
+                        <th>Supplier</th>
+                        <th>Department</th>
+                        <th>Cost Type</th>
+                        <th>Quote Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>PO Doc</th>
+                        <th>Invoice</th>
+                        <th class="pe-4">POP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.PaidRequests.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">No logged records found inside active audit targets.</td>
+                        </tr>
+                    }
+                    @foreach (var item in Model.PaidRequests)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted small">#@item.Id</td>
+                            <td>
+                                <div class="fw-medium text-dark">
+                                    @(item.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "No Vendor Marked")
+                                </div>
+                            </td>
+                            <td>
+                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.DepartmentType</div>
+                            </td>
+                            <td>
+                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.CostType</div>
+                            </td>
+                            <td>
+                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.QuoteType</div>
+                            </td>
+                            <td class="fw-bold text-dark">R @item.TotalAmount.ToString("N2")</td>
+                            <td>
+                                <span class="badge @(item.Status == "Closed" || item.Status == "PO_Payment_Queue" ? "bg-success" : item.Status == "PO_Issued" ? "bg-primary" : "bg-dark")">
+                                    @item.Status
+                                </span>
+                            </td>
+                            
+                            @* --- FIXED: Look for 'Purchase_Order' or 'PO' discriminator flags --- *@
+                            <td>
+                                @if (item.IsPoRequired)
+                                {
+                                    var poDoc = item.Documents?.FirstOrDefault(d => d.DocType == "Purchase_Order" || d.DocType == "PO");
+                                    if (poDoc != null)
+                                    {
+                                        <a href="@poDoc.BlobUrl" target="_blank" class="btn btn-sm btn-outline-primary py-0 px-2 small">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> View PO
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning-soft text-warning fw-bold small" style="font-size: 0.75rem;">Awaiting Upload</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">N/A (Standard)</span>
+                                }
+                            </td>
+
+                            <td>
+                                @{
+                                    var invoiceDoc = item.Documents?.FirstOrDefault(d => d.DocType == "Invoice");
+                                    if(item.Status == "Awaiting_Manager_Closure")
+                                    {
+                                        <span class="text-muted small">N/A (Standard)</span>
+                                    }
+
+                                    else if (invoiceDoc != null)
+                                    {
+                                        <a href="@invoiceDoc.BlobUrl" target="_blank" class="btn btn-sm btn-outline-info py-0 px-2 small text-decoration-none">
+                                            <i class="bi bi-receipt me-1"></i> View Inv
+                                        </a>
+                                    }
+
+                                    else
+                                    {
+                                        if (item.RequestType != "Normal")
+                                        {
+                                            <span class="text-muted small">N/A (Standard)</span>
+                                        }
+
+                                        else
+                                        {
+                                            <span class="text-muted small">Pending Upload</span>
+                                        }
+                                    }
+                                }
+                            </td>
+
+                            <td class="pe-4">
+                                @{
+                                    var popDoc = item.Documents?.FirstOrDefault(d => d.DocType == "POP");
+                                    if(item.Status == "Awaiting_Manager_Closure")
+                                    {
+                                        <a href="@popDoc.BlobUrl" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 small text-decoration-none">
+                                            <i class="bi bi-wallet2 me-1"></i> View Doc
+                                        </a>
+                                    }
+
+                                    else if (popDoc != null)
+                                    {
+                                        <a href="@popDoc.BlobUrl" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2 small text-decoration-none">
+                                            <i class="bi bi-wallet2 me-1"></i> View POP
+                                        </a>
+                                    }
+                                    else if (item.Status == "PO_Payment_Queue")
+                                    {
+                                        <span class="badge bg-primary-soft text-primary fw-bold small" style="font-size: 0.75rem;">Queued for 1st</span>
+                                    }
+                                    else if (item.IsPoRequired)
+                                    {
+                                        <span class="text-muted small">N/A (Account)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Awaiting Pay</span>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-warning-soft { background-color: rgba(255, 193, 7, 0.1); }
+    .bg-primary-soft { background-color: rgba(13, 110, 253, 0.1); }
+</style>

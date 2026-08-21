@@ -1,0 +1,281 @@
+﻿@page "{id:int}"
+@model Intranet.Pages.Procurement.Manager.DetailsModel
+@using System.Security.Claims
+@{
+    ViewData["Title"] = "Request Details";
+    var currentUserIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    Guid.TryParse(currentUserIdStr, out Guid currentUserId);
+
+    bool isAuthorizedOwner = User.IsInRole("Manager") && Model.RequestData.RequesterId == currentUserId;
+    bool isEditableStatus = Model.RequestData.Status == "Pending_HOO" ||
+                            Model.RequestData.Status == "Pending_HOS" ||
+                            Model.RequestData.Status == "Submitted";
+
+}
+
+
+
+<div class="container mt-4">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="mb-0 fw-bold">Request Tracking: #@Model.RequestData.Id</h5>
+            <div>
+                @if (Model.RequestData.Status == "Resubmit_Invoice")
+                {
+                    <span class="badge bg-danger px-3 py-2">REJECTED: RESUBMIT INVOICE</span>
+                }
+                else if (Model.RequestData.Status == "PO_Issued")
+                {
+                    <span class="badge bg-warning text-dark px-3 py-2">AWAITING SIGN-OFF</span>
+                }
+                else
+                {
+                    <span class="badge bg-dark px-3 py-2">@Model.RequestData.Status.Replace("_", " ")</span>
+                }
+            </div>
+        </div>
+        <div class="card-body">
+            @if (Model.RequestData.Status == "Resubmit_Invoice" && isAuthorizedOwner)
+            {
+                <div class="alert alert-danger border-start border-4 shadow-sm mb-4">
+                    <div class="d-flex">
+                        <i class="bi bi-exclamation-octagon-fill fs-4 me-3"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1">Invoice Rejected by Finance</h6>
+                            <p class="mb-2">@Model.RequestData.RejectionReason</p>
+                            <a asp-page="./UploadInvoice" asp-route-id="@Model.RequestData.Id" class="btn btn-danger btn-sm fw-bold">
+                                <i class="bi bi-upload me-1"></i> Upload Corrected Invoice
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+            @if (Model.RequestData.Status == "PO_Issued")
+            {
+                <div class="alert alert-info border-start border-4 shadow-sm mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill fs-4 me-3 text-info"></i>
+                        <div>
+                            <h6 class="fw-bold mb-1 text-dark">Purchase Order Dispatched</h6>
+                            <p class="mb-0 text-muted small">Finance has generated and emailed out the official PO documentation. Please review delivery and execute the sign-off action panel on the right side once ready.</p>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="row">
+                <div class="col-md-8">
+                    <h6 class="fw-bold small text-uppercase">Motivation</h6>
+                    <p class="text-muted">@Model.RequestData.Description</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <h6 class="fw-bold small text-uppercase">Customer Name</h6>
+                            <p class="text-muted">@Model.RequestData.CustomerName</p>                 
+                        </div>
+
+                        <div class="col-6">
+                            <h6 class="fw-bold small text-uppercase">Quote Type</h6>
+                            <p class="badge bg-light text-dark border">@Model.RequestData.QuoteType</p>                    
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <h6 class="fw-bold small text-uppercase">Amount</h6>
+                            <p class="h5 text-primary fw-bold">R @Model.RequestData.TotalAmount.ToString("N2")</p>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="fw-bold small text-uppercase">Expense Type</h6>
+                            <p class="badge bg-light text-dark border">@Model.RequestData.CostType</p>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h6 class="fw-bold mb-3">Original Quotes</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4">
+                        @foreach (var quote in Model.RequestData.Quotes)
+                        {
+                            <div class="border rounded p-2 d-flex align-items-center bg-white shadow-sm @(quote.IsSelected ? "border-success bg-success-subtle bg-opacity-10" : "")" style="min-width: 200px;">
+                                <i class="bi bi-file-earmark-pdf text-danger fs-4 me-2"></i>
+                                <div class="flex-grow-1">
+                                    <div class="small fw-bold text-truncate" style="max-width: 150px;">@quote.SupplierName</div>
+                                    <div class="x-small text-muted">R @quote.Price.ToString("N2")</div>
+                                </div>
+                                <a href="@quote.BlobUrl" target="_blank" class="btn btn-sm btn-light border ms-2"><i class="bi bi-eye"></i></a>
+                                @if (quote.IsSelected)
+                                {
+                                    <span class="badge bg-success ms-1"><i class="bi bi-check"></i></span>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                  
+                    @if (Model.GetInvoice != null || Model.ProofOfPayment != null || Model.GetPO != null)
+                    {
+                        <h6 class="fw-bold mb-3">Procurement Documents Ledger</h6>
+                        <div class="row g-2 mb-4">
+                            @if (Model.GetInvoice != null)
+                            {
+                                <div class="col-sm-6">
+                                    <div class="border rounded p-3 d-flex align-items-center bg-light">
+                                        <i class="bi bi-file-earmark-text text-warning fs-3 me-3"></i>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="small fw-bold text-truncate">Active Supplier Invoice</div>
+                                            <div class="text-muted small" style="font-size:0.75rem;">Uploaded: @Model.GetInvoice.UploadedAt?.ToString("yyyy-MM-dd")</div>
+                                        </div>
+                                        <a href="@Model.GetInvoice.BlobUrl" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-box-arrow-up-right"></i></a>
+                                    </div>
+                                </div>
+                            }
+                            @if (Model.ProofOfPayment != null)
+                            {
+                                <div class="col-sm-6">
+                                    <div class="border rounded p-3 d-flex align-items-center bg-light">
+                                        <i class="bi bi-file-earmark-check text-success fs-3 me-3"></i>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="small fw-bold text-truncate">Proof of Payment (POP)</div>
+                                            <div class="text-muted small" style="font-size:0.75rem;">Uploaded: @Model.ProofOfPayment.UploadedAt?.ToString("yyyy-MM-dd")</div>
+                                        </div>
+                                        <a href="@Model.ProofOfPayment.BlobUrl" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-box-arrow-up-right"></i></a>
+                                    </div>
+                                </div>
+                            }
+                            @if (Model.GetPO != null)
+                            {
+                                <div class="col-sm-6">
+                                    <div class="border rounded p-3 d-flex align-items-center bg-light">
+                                        <i class="bi bi-file-earmark-check text-success fs-3 me-3"></i>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="small fw-bold text-truncate">Payment Order(PO)</div>
+                                            <div class="text-muted small" style="font-size:0.75rem;">Uploaded: @Model.GetPO.UploadedAt?.ToString("yyyy-MM-dd")</div>
+                                        </div>
+                                        <a href="@Model.GetPO.BlobUrl" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-box-arrow-up-right"></i></a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    <h6 class="fw-bold mb-3">Workflow History</h6>
+                    @foreach (var step in Model.ApprovalSteps)
+                    {
+                        <div class="alert @(step.IsApproved ? "alert-success-subtle border-success-subtle text-success-emphasis" : "alert-danger-subtle border-danger-subtle text-danger-emphasis") border py-3 small shadow-sm mb-3">
+                            <div class="d-flex justify-content-between fw-bold">
+                                <span>@step.Stage</span>
+                                <span class="text-muted small">@step.DecisionDate?.ToString("MMM dd, yyyy HH:mm")</span>
+                            </div>
+                            <div class="mt-2 text-dark">@(string.IsNullOrEmpty(step.Comments) ? "No comments provided." : step.Comments)</div>
+                        </div>
+                    }
+                </div>
+
+                <div class="col-md-4 border-start">
+                    <div class="p-2">
+                        <h6 class="fw-bold small text-uppercase text-muted">Summary</h6>
+                        <ul class="list-unstyled small">
+                            <li class="d-flex justify-content-between mb-2">
+                                <span>Type:</span> 
+                                <span class="fw-bold text-primary">
+                                    @if (Model.RequestData.RequestType == "PO")
+                                    {
+                                        <span class="badge bg-primary">PO</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@Model.RequestData.RequestType</span>
+                                    }
+                                </span>
+                            </li>
+                            <li class="d-flex justify-content-between mb-2">
+                                <span>Created:</span>
+                                <span class="fw-bold">@Model.RequestData.CreatedAt?.ToString("yyyy-MM-dd")</span>
+                            </li>
+                            <li class="d-flex justify-content-between mb-2">
+                                <span>Timing:</span>
+                                <span class="fw-bold">@Model.RequestData.PaymentTiming</span>
+                            </li>
+                        </ul>
+
+
+                        <hr />
+
+                        <a href="@(string.IsNullOrEmpty(Model.ReturnUrl) ? Url.Page("./MyRequests") : Model.ReturnUrl)" class="btn btn-outline-secondary w-100 mb-2 fw-bold">
+                            <i class="bi bi-arrow-left me-1"></i> Back
+                        </a>
+                        
+                        
+
+                        @if (isAuthorizedOwner && isEditableStatus)
+                        {
+                            <a asp-page="./Create" asp-route-id="@Model.RequestData.Id" class="btn btn-primary w-100 mb-2 fw-bold">
+                                <i class="bi bi-pencil-square me-1"></i> Edit Request
+                            </a>
+                        }
+                        
+                        @if ((Model.RequestData.Status == "Awaiting_Invoice" || Model.RequestData.Status == "Resubmit_Invoice") && isAuthorizedOwner)
+                        {
+                            <a asp-page="./UploadInvoice" asp-route-id="@Model.RequestData.Id" class="btn btn-warning w-100 fw-bold">
+                                <i class="bi bi-upload me-1"></i> Upload Invoice
+                            </a>
+                        }
+
+                        @if (isAuthorizedOwner)
+                        {
+                            @* Case 1: Standard PO Sign-Off *@
+                            @if (Model.RequestData.Status == "PO_Issued")
+                            {
+                                <div class="card bg-light border-warning border-opacity-50 p-2 mt-3">
+                                    <span class="small fw-bold text-uppercase text-warning-emphasis mb-2 d-block">
+                                        <i class="bi bi-shield-lock me-1"></i>Sign-Off Control
+                                    </span>
+                                    <form method="post" asp-page-handler="SignOff" asp-route-id="@Model.RequestData.Id"
+                                          onsubmit="return confirm('Confirm delivery and push to Finance?');">
+                                        <button type="submit" class="btn btn-success w-100 fw-bold text-white shadow-sm">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Sign Off & Close PO
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                            @* Case 2: Waybill/ONLINE Acknowledgement *@
+                            else if ((Model.RequestData.RequestType == "Waybill" || Model.RequestData.RequestType == "ONLINE")
+                                     && Model.RequestData.Status != "Closed" && Model.RequestData.Status == "Awaiting_Manager_Closure")
+                            {
+                                <div class="card bg-light border-success border-opacity-50 p-2 mt-3">
+                                    <span class="small fw-bold text-uppercase text-success-emphasis mb-2 d-block">
+                                        <i class="bi bi-check-circle me-1"></i>Acknowledgment Required
+                                    </span>
+                                    <form method="post" asp-page-handler="Acknowledge" asp-route-id="@Model.RequestData.Id"
+                                          onsubmit="return confirm('Confirm acknowledgment to close this request?');">
+                                        <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
+                                            <i class="bi bi-clipboard-check me-1"></i> Acknowledge & Close
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+
+                            else if (Model.RequestData.Status == "Rejected")
+                            {
+                                <div class="card bg-light border-success border-opacity-50 p-2 mt-3">
+                                    <span class="small fw-bold text-uppercase text-success-emphasis mb-2 d-block">
+                                        <i class="bi bi-check-circle me-1"></i>Acknowledgment Required
+                                    </span>
+                                    <form method="post" asp-page-handler="AcknowledgeRejected" asp-route-id="@Model.RequestData.Id"
+                                          onsubmit="return confirm('Confirm acknowledgment to close this request?');">
+                                        <button type="submit" class="btn btn-primary w-100 fw-bold shadow-sm">
+                                            <i class="bi bi-clipboard-check me-1"></i> Acknowledge & Close
+                                        </button>
+                                    </form>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

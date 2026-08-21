@@ -1,0 +1,34 @@
+# Internal Procurement System
+
+An enterprise-grade procurement and financial document processing web application built with C# .NET, leveraging AI-powered document parsing and secure cloud infrastructure.
+
+## 🛠️ Tech Stack & Architecture
+* **Backend:** C#, ASP.NET Core (Razor Pages), Entity Framework Core (SQL Server)
+* **AI & Intelligence:** Google Vertex AI (Gemini 2.5 Flash model) with structured JSON schema output validation for quote/invoice parsing.
+* **Cloud Infrastructure (Azure):** 
+  * Azure App Service (Hosting)
+  * Azure Blob Storage (Document storage)
+  * Azure Key Vault (Secret and connection string management)
+* **Authentication:** Microsoft Entra ID "Easy Auth" (Single-Tenant, restricted to `@vumelait.co.za`) enforced with Multi-Factor Authentication (MFA).
+
+---
+
+## 🚀 Key Features
+* **Automated Document Processing:** Ingests procurement quotes and invoices, parsing them securely using Gemini 2.5 Flash.
+* **Database Persistence:** Uses EF Core with SQL Server to maintain structured transaction and audit data.
+* **Secure Enterprise Access:** Locked down behind corporate Microsoft Entra ID credentials with required MFA.
+
+---
+
+## ⚙️ Configuration & Environment Variables
+The application expects specific secrets and connection strings to be available (managed securely via Azure Key Vault in production):
+* `ConnectionStrings:DefaultConnection` - SQL Server database connection string.
+* `AzureBlobStorage:ConnectionString` - Storage account connection string for document archives.
+* `GoogleCloud:VertexAIKey` (or service account credentials) - Used by `GeminiAgentService` for parsing documents.
+
+---
+
+## 🔒 Deployment & Infrastructure Notes
+* **Authentication Setup:** Secured via Azure App Service "Easy Auth" tied to the `vumelait.co.za` Microsoft Entra ID tenant.
+* **Client Secret Expiration:** The underlying Azure App Registration secret expires every 24 months. 
+  * *Maintenance:* If authentication fails unexpectedly down the road, generate a new client secret in Azure Portal (**Microsoft Entra ID** -> **App registrations** -> **Certificates & secrets**) and update it in the App Service authentication settings.

@@ -1,0 +1,119 @@
+﻿@page "{id:int}"
+@model Intranet.Pages.Procurement.Approvals.ReviewModel
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0 fw-bold text-dark">Review Request #@Model.Request.Id</h5>
+                        <small class="text-muted">Status: <span class="badge bg-secondary">@Model.Request.Status.Replace("_", " ")</span></small>
+                    </div>
+                    <span class="badge bg-primary">@Model.Request.CostType</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Requested by <strong>@Model.Request.Requester.FirstName @Model.Request.Requester.Surname</strong></p>
+                    <div class="bg-light p-3 rounded mb-4 border-start border-4 border-primary">
+                        <h6 class="fw-bold">Motivation:</h6>
+                        <p class="mb-0">@Model.Request.Description</p>
+                    </div>
+
+                    <div class="bg-light p-3 rounded mb-4 border-start border-4 border-primary">
+                        <h6 class="fw-bold">Quote Details:</h6>
+                        <p class="mb-0">Customer Name - @Model.Request.CustomerName</p>
+                        <p class="mb-0">Department - @Model.Request.DepartmentType</p>
+                        <p class="mb-0">Quote Type - @Model.Request.QuoteType</p>
+                        <p class="mb-0">Request Type - @Model.Request.RequestType</p>
+                    </div>
+
+                    <h6 class="fw-bold mb-3"><i class="bi bi-robot me-2"></i>Supplier Quotes (AI Analysis)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle border">
+                            <thead class="table-light small text-uppercase">
+                                <tr>
+                                    <th>Supplier</th>
+                                    <th>Price</th>
+                                    <th>AI Analysis & Suggestion</th>
+                                    <th>AI Confidence</th>
+                                    <th>Selection</th>
+                                    <th>Doc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var quote in Model.Request.Quotes)
+                                {
+                                    <tr class="@(quote.IsSelected ? "table-success" : "")">
+                                        <td class="fw-bold">@quote.SupplierName</td>
+                                        <td class="text-nowrap">R @quote.Price.ToString("N2")</td>
+                                        <td class="small">
+                                            @if (!string.IsNullOrEmpty(quote.AiAnalysisNotes))
+                                            {
+                                                <span class="text-info">@quote.AiAnalysisNotes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted italic">No AI notes available</span>
+                                            }
+                                        </td>
+                                        <td style="min-width: 120px;">
+                                            @if (quote.AiConfidenceScore.HasValue)
+                                            {
+                                                <div class="d-flex align-items-center">
+                                                    <div class="progress flex-grow-1 me-2" style="height: 6px;">
+                                                        <div class="progress-bar @(quote.AiConfidenceScore > 0.8 ? "bg-success" : "bg-warning")"
+                                                             role="progressbar"
+                                                             style="width: @(quote.AiConfidenceScore * 100)%"></div>
+                                                    </div>
+                                                    <span class="small fw-bold">@(Math.Round(quote.AiConfidenceScore.Value * 100))%</span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (quote.IsSelected)
+                                            {
+                                                <span class="badge bg-dark">Manager Choice</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a href="@quote.BlobUrl" target="_blank" class="text-dark"><i class="bi bi-file-earmark-pdf h5"></i></a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 2rem;">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3">Decision Panel</h5>
+                    <div class="alert alert-info py-2 small mb-4">
+                        <i class="bi bi-info-circle me-2"></i> Total Amount: <strong>R @Model.Request.TotalAmount.ToString("N2")</strong>
+                    </div>
+                    <form method="post" asp-page-handler="Decision" asp-route-id="@Model.Request.Id">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Reviewer Comments</label>
+                            <textarea asp-for="DecisionComments" class="form-control border-0 bg-light" rows="4" placeholder="Enter reason for approval or rejection..."></textarea>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" name="isApproved" value="true" class="btn btn-success py-2 fw-bold shadow-sm">
+                                <i class="bi bi-check-circle me-2"></i>Approve Request
+                            </button>
+                            <button type="submit" name="isApproved" value="false" class="btn btn-outline-danger py-2">
+                                <i class="bi bi-x-circle me-2"></i>Reject Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

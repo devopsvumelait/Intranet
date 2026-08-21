@@ -1,0 +1,78 @@
+﻿@page
+@model Intranet.Pages.Procurement.ReportArchivesModel
+@{
+    ViewData["Title"] = "Monthly Archives";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold"><i class="bi bi-archive me-2"></i>Monthly Report Archives</h3>
+        <a asp-page="/Procurement/Reports" class="btn btn-outline-dark">Back to Reports</a>
+    </div>
+    <form method="get" class="row g-3 align-items-center mb-4">
+        <div class="col-auto">
+            <label class="visually-hidden">Month</label>
+            <select asp-for="SelectedMonth" class="form-select">
+                <option value="">All Months</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <label class="visually-hidden">Year</label>
+            <select asp-for="SelectedYear" class="form-select">
+                <option value="">All Years</option>
+                @for (int i = DateTime.Now.Year; i >= DateTime.Now.Year - 5; i--)
+                {
+                    <option value="@i">@i</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a asp-page="./ReportArchives" class="btn btn-secondary">Reset</a>
+        </div>
+    </form>
+
+
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">File Name</th>
+                        <th>Generated On</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.ArchivedReports)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-bold text-primary">@doc.FileName</td>
+                            <td>@doc.UploadedAt?.ToString("MMMM dd, yyyy")</td>
+                            <td class="text-end pe-4">
+                                <a href="@doc.BlobUrl" download class="btn btn-sm btn-primary">
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

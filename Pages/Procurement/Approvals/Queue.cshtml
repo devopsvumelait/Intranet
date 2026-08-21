@@ -1,0 +1,83 @@
+﻿@page
+@model Intranet.Pages.Procurement.Approvals.QueueModel
+@{
+    ViewData["Title"] = "Approval Queue";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark">Approval Queue: @Model.CurrentRole</h3>
+            <p class="text-muted">Items requiring your executive sign-off for procurement.</p>
+        </div>
+        <span class="badge bg-dark px-3 py-2">@Model.PendingRequests.Count Pending</span>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr class="text-muted small text-uppercase">
+                            <th class="ps-4" style="width: 100px;">ID</th>
+                            <th>Requester & Department</th>
+                            <th>Item Description</th>
+                            <th>Total (AI Extracted)</th>
+                            <th>Type</th>
+                            <th class="text-end pe-4">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.PendingRequests.Any())
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-check2-circle display-4"></i>
+                                        <p class="mt-2">Your queue is currently empty.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        @foreach (var item in Model.PendingRequests)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="text-muted small">#@item.Id</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">@item.Requester.FirstName @item.Requester.Surname</div>
+                                    <div class="small text-muted">@item.Requester.Department.Name</div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;">
+                                        @item.Description
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-primary">R @item.TotalAmount.ToString("N2")</span>
+                                </td>
+                                <td>
+                                    @if (item.CostType == "BAU")
+                                    {
+                                        <span class="badge bg-info text-dark">BAU</span>
+                                    }
+                                    else
+                                    { 
+                                        <span class="badge bg-secondary">Projects</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-4">
+                                    <a asp-page="/Procurement/Approvals/Review" asp-route-id="@item.Id"
+                                           class="btn btn-sm btn-dark px-3 shadow-sm">
+                                        Review & Decide
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,44 @@
+﻿@page
+@model Intranet.Pages.Procurement.Finance.VerifyQueueModel
+@{
+    ViewData["Title"] = "Pending Verifications";
+}
+
+<div class="container mt-4">
+    <h3 class="fw-bold mb-4">Final Audit Queue</h3>
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light small text-uppercase">
+                    <tr>
+                        <th class="ps-4">Req #</th>
+                        <th>Supplier</th>
+                        <th>Requester</th>
+                        <th>Amount</th>
+                        <th class="text-end pe-4">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.PendingVerification.Any())
+                    {
+                        <tr><td colspan="5" class="text-center py-5 text-muted">No invoices pending verification.</td></tr>
+                    }
+                    @foreach (var item in Model.PendingVerification)
+                    {
+                        <tr>
+                            <td class="ps-4 text-muted">#@item.Id</td>
+                            <td class="fw-bold">@item.Quotes.FirstOrDefault()?.SupplierName</td>
+                            <td>@item.Requester.FirstName @item.Requester.Surname</td>
+                            <td class="text-primary fw-bold">R @item.TotalAmount.ToString("N2")</td>
+                            <td class="text-end pe-4">
+                                <a asp-page="./VerifyClosure" asp-route-id="@item.Id" class="btn btn-sm btn-primary">
+                                    Perform Audit
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

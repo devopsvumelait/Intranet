@@ -1,0 +1,509 @@
+﻿@page "{id:int?}"
+@model Intranet.Pages.Procurement.Manager.CreateModel
+@{
+    ViewData["Title"] = Model.IsEditMode ? "Edit Procurement Request" : "New Procurement Request";
+}
+<style>
+    
+    select:disabled {
+        background-color: #e9ecef !important;
+        cursor: not-allowed !important;
+        opacity: 0.7 !important;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            @if (Model.FormStep == 1)
+            {
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white border-bottom pb-0 pt-4 px-4">
+                        <h4 class="mb-1 text-dark">@(Model.IsEditMode ? $"Modify Request #{Model.Id}" : "Initiate Procurement")</h4>
+                        <p class="text-muted small">
+                            Upload new records or manage your currently stored quote documents directly inside the list container below.
+                        </p>
+                    </div>
+                    <div class="card-body p-4">
+                        @if (!ViewData.ModelState.IsValid)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center mb-4" role="alert">
+                                <div class="me-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-exclamation-octagon-fill text-danger" viewBox="0 0 16 16">
+                                        <path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4zm.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+                                    </svg>
+                                </div>
+                                <div asp-validation-summary="All" class="text-danger small fw-bold list-unstyled m-0"></div>
+                                <button type="button" class="btn-close small" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        }
+
+
+
+                        <form method="post" enctype="multipart/form-data" id="procurementForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="FormStep" value="1" />
+                            <input type="hidden" name="Id" value="@Model.Id" />
+                            <input type="hidden" name="SerializedQuotes" id="serializedQuotesInput" value="@Model.SerializedQuotes" />
+                            <input type="hidden" name="SelectedQuoteUrl" value="@Model.SelectedQuoteUrl" />
+                            <input type="hidden" name="RemovedQuoteIds" id="removedQuoteIdsInput" value="@Model.RemovedQuoteIds" />
+                            
+                            <div class="alert alert-danger small d-none" id="validationSummary"></div>
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+                            
+
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <label asp-for="DepartmentType" class="form-label fw-bold">Department</label>
+                                    <select asp-for="DepartmentType" id="departmentTypeInput" class="form-select bg-light border-0">
+                                        <option value="EUC">EUC</option>
+                                        <option value="Networks">Networks</option>
+                                        <option value="Cabling">Cabling</option>
+                                        <option value="ADHOC">ADHOC</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="CostType" class="form-label fw-bold">Expense Type</label>
+                                    <select asp-for="CostType" id="costTypeInput" class="form-select bg-light border-0">
+                                        <option value="Projects">Projects</option>
+                                        <option value="BAU">BAU (Business As Usual)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label asp-for="CustomerName" class="form-label fw-bold">Customer Name</label>
+                                    <textarea asp-for="CustomerName" id="customerName" class="form-control bg-light border-0" rows="1" required></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="QuoteType" class="form-label fw-bold">Quote Type</label>
+                                    <select asp-for="QuoteType" id="quoteTypeInput" class="form-select bg-light border-0">
+                                        <option value="Accomodation">Accomodation</option>
+                                        <option value="Courier">Courier</option>
+                                        <option value="Flights">Flights</option>
+                                        <option value="Fuel">Fuel</option>
+                                        <option value="Health And Safety">Health and Safety</option>
+                                        <option value="Legal Fees">Legal Fees</option>
+                                        <option value="Medicals">Medicals</option>
+                                        <option value="Networking Expense">Networking Expense</option>
+                                        <option value="PPE">PPE</option>
+                                        <option value="S&T">S&T</option>
+                                        <option value="Security Clearance">Security Clearance</option>
+                                        <option value="Small Assets">Small Assets</option>
+                                        <option value="Staff Welfare">Staff Welfare</option>
+                                        <option value="Team Builds">Team Builds</option>
+                                        <option value="Telephone And Internet">Telephone And Internet</option>
+                                        <option value="Tool Hire">Tool Hire</option>
+                                        <option value="Training">Training</option>
+                                        <option value="Vehicle  Expense">Vehicle Expense</option>
+                                        <option value="Vehicle Hire">Vehicle Hire</option>                                      
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label asp-for="PaymentTiming" class="form-label fw-bold">Payment Timing</label>
+                                    <select asp-for="PaymentTiming" id="paymentTimingInput" class="form-select bg-light border-0">
+                                        <option value="Present">Present Dated</option>
+                                        <option value="Future">Future Dated</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-4 d-none" id="futureDateContainer">
+                                <label asp-for="FutureDate" class="form-label fw-bold">Target Payment/Execution Date</label>
+                                <input type="date" asp-for="FutureDate" id="futureDateInput" class="form-control bg-light border-0" />
+                            </div>
+
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Request Category</label>
+                                <select asp-for="RequestType" id="requestTypeSelect" class="form-select" required>
+                                    <option value="Normal">Normal Procurement with Invoice</option>
+                                    <option value="ONLINE">ONLINE (Screenshot/Web)</option>
+                                    <option value="Waybill">Waybill (Wallet/Virtual)</option>
+                                    <option value="PO">Purchase Order (PO)</option>
+
+                                </select>
+                            </div>
+
+                          @*  <div class="mb-4 p-3 bg-light rounded border border-start border-4 border-primary">
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" role="switch" asp-for="IsPoRequired" id="poToggleSwitch">
+                                    <label class="form-check-label fw-bold text-dark ps-2" for="poToggleSwitch">
+                                        Is a Corporate Purchase Order (PO) required?
+                                    </label>
+                                </div>
+                            </div> *@
+                            
+                            <div class="mb-4">
+                            <label asp-for="Description" class="form-label fw-bold">Motivation</label>
+                                <p class="text-muted small">
+                                    You may as well include a description of the Quote if needed
+                                </p>
+                            <textarea asp-for="Description" id="descriptionInput" class="form-control bg-light border-0" rows="3" required></textarea>
+                        </div>
+
+
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Supplier Quotes (Max 3)</label>
+                                <div class="input-group mb-2">
+                                    <input type="file" id="filePicker" name="QuoteFiles" class="form-control bg-light border-0" multiple accept=".pdf,.jpg,.png" />
+                                </div>
+                                <div id="fileLimitWarning" class="text-danger small mb-2" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Maximum of 3 quotes allowed.</div>
+                                <div id="fileList" class="mb-3"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center border-top pt-4">
+                                <a asp-page="/Procurement/Manager/MyRequests" class="btn btn-link text-muted text-decoration-none">Cancel</a>
+                                <button type="submit" id="submitBtn" class="btn @(Model.IsEditMode ? "btn-primary" : "btn-dark") px-4 py-2">
+                                    Proceed to Review
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white py-3 px-4 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-robot me-2"></i>AI Sourcing Review</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" id="reviewForm">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="FormStep" value="2" />
+                            
+                            <input type="hidden" name="DepartmentType" value="@Model.DepartmentType" />
+                            <input type="hidden" name="CustomerName" value="@Model.CustomerName" />
+                            <input type="hidden" name="QuoteType" value="@Model.QuoteType" />
+                            <input type="hidden" name="Description" value="@Model.Description" />
+                            <input type="hidden" name="RequestType" value="@Model.RequestType" />
+                            <input type="hidden" name="CostType" value="@Model.CostType" />
+                            <input type="hidden" name="PaymentTiming" value="@Model.PaymentTiming" />
+                            <input type="hidden" name="FutureDate" value="@(Model.PaymentTiming == "Future" ? Model.FutureDate?.ToString("yyyy-MM-dd") : "")" />
+                            <input type="hidden" name="IsPoRequired" value="@(Model.IsPoRequired ? "true" : "false")" />
+                            <input type="hidden" name="Id" value="@Model.Id" />
+                            <input type="hidden" name="SerializedQuotes" id="serializedQuotesInput" value="@Model.SerializedQuotes" />
+                            <input type="hidden" name="RemovedQuoteIds" value="@Model.RemovedQuoteIds" />
+
+                            @if (Model.PaymentTiming == "Future" && Model.FutureDate.HasValue)
+                            {
+                                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-3 p-3">
+                                    <i class="bi bi-calendar-event-fill text-warning fs-4 me-3"></i>
+                                    <div>
+                                        <span class="fw-bold d-block text-dark">Future Dated Execution Target</span>
+                                        <small class="text-muted">This tracking workflow will process on: <strong>@Model.FutureDate.Value.ToString("dd MMMM yyyy")</strong></small>
+                                    </div>
+                                </div>
+                            }
+
+                            <p class="text-muted small mb-3">Select which extracted quote option you wish to accept and allocate below:</p>
+
+                            <div class="list-group mb-4">
+                                @for (int i = 0; i < Model.ExtractedQuotes.Count; i++)
+                                {
+                                    var quote = Model.ExtractedQuotes[i];
+                                    bool isChecked = (i == 0 && string.IsNullOrEmpty(Model.SelectedQuoteUrl)) || (Model.SelectedQuoteUrl == quote.BlobUrl);
+                                    
+                                    <label class="list-group-item p-3 border-2 mb-3 rounded shadow-sm quote-card-label @(isChecked ? "border-primary bg-light" : "")" style="cursor:pointer;">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="d-flex align-items-start">
+                                                <input class="form-check-input me-3 mt-1 quote-radio-selector" type="radio" name="SelectedQuoteUrl" value="@quote.BlobUrl" @(isChecked ? "checked" : "")>
+                                                <div>
+                                                    <div class="h6 mb-0 fw-bold text-dark">@quote.SupplierName</div>
+                                                    <div class="small text-primary fw-bold mt-1">VAT: @quote.AiExtractedVat</div>
+                                                    <p class="small text-muted mb-0 mt-1">@quote.AiAnalysisNotes</p>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="h5 mb-1 fw-bold text-success">R @quote.Price.ToString("N2")</div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                }
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center border-top pt-4">
+                                <button type="submit" id="saveBtn" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
+                                    Save Changes & Proceed
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let filesArray = [];
+        let dbFilesArray = [];
+        let removedDbIds = [];
+        
+        const maxFiles = 3;
+        const filePicker = document.getElementById('filePicker');
+        const fileListContainer = document.getElementById('fileList');
+        const submitBtn = document.getElementById('submitBtn');
+        const warning = document.getElementById('fileLimitWarning');
+        const removedInput = document.getElementById('removedQuoteIdsInput');
+        const serializedInput = document.getElementById('serializedQuotesInput');
+        const isEditMode = @(Model.IsEditMode.ToString().ToLower());
+
+        const paymentTimingInput = document.getElementById('paymentTimingInput');
+        const futureDateContainer = document.getElementById('futureDateContainer');
+        const futureDateInput = document.getElementById('futureDateInput');
+
+        function toggleDateVisibility() {
+            if (paymentTimingInput && futureDateContainer && futureDateInput) {
+                if (paymentTimingInput.value === "Future") {
+                    futureDateContainer.classList.remove('d-none');
+                    futureDateInput.setAttribute('required', 'required');
+                } else {
+                    futureDateContainer.classList.add('d-none');
+                    futureDateInput.removeAttribute('required');
+                    futureDateInput.value = "";
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            toggleDateVisibility();
+            if (paymentTimingInput) {
+                paymentTimingInput.addEventListener('change', toggleDateVisibility);
+            }
+
+            if (isEditMode && serializedInput && serializedInput.value) {
+                try {
+                    const existing = JSON.parse(serializedInput.value);
+                    existing.forEach(item => {
+                        dbFilesArray.push({
+                            id: item.Id,
+                            name: item.SupplierName + " (Stored Document)",
+                            url: item.BlobUrl  // FIX: store BlobUrl so updateSerializedInput can reference it correctly
+                        });
+                    });
+                } catch(e) { console.error("Error parsing JSON collection arrays", e); }
+                renderFiles();
+            }
+
+            const radioSelectors = document.querySelectorAll('.quote-radio-selector');
+            radioSelectors.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    document.querySelectorAll('.quote-card-label').forEach(lbl => {
+                        lbl.classList.remove('border-primary', 'bg-light');
+                    });
+                    if(this.checked) {
+                        this.closest('.quote-card-label').classList.add('border-primary', 'bg-light');
+                    }
+                });
+            });
+
+                    const poToggle = document.getElementById('poToggleSwitch');
+            const requestTypeSelect = document.getElementById('requestTypeSelect');
+
+            if (poToggle && requestTypeSelect) {
+                poToggle.addEventListener('change', function () {
+                    if (this.checked) {
+                        // Force to None and disable the dropdown so the user can't change it
+                        requestTypeSelect.value = "PO";
+                        requestTypeSelect.disabled = true;
+                    } else {
+                        // Restore ability to select others
+                        requestTypeSelect.disabled = false;
+                        requestTypeSelect.value = "Normal";
+                    }
+                });
+        
+                // Initial state check (in case it's already checked on page load/edit)
+                if (poToggle.checked) {
+                    requestTypeSelect.value = "PO";
+                    requestTypeSelect.disabled = true;
+                }
+            }
+        });
+
+        if(filePicker) {
+            filePicker.addEventListener('change', function (e) {
+                const newFiles = Array.from(e.target.files);
+                if ((filesArray.length + dbFilesArray.length + newFiles.length) > maxFiles) {
+                    warning.style.display = "block";
+                    const spaceLeft = maxFiles - (filesArray.length + dbFilesArray.length);
+                    for (let i = 0; i < spaceLeft; i++) filesArray.push(newFiles[i]);
+                } else {
+                    warning.style.display = "none";
+                    newFiles.forEach(f => filesArray.push(f));
+                }
+                syncFileInput();
+                renderFiles();
+            });
+        }
+
+        function updateSerializedInput() {
+            const currentState = dbFilesArray.map(f => ({
+                Id: f.id,
+                SupplierName: f.name.replace(" (Stored Document)", ""),
+                BlobUrl: f.url
+            }));
+    
+            if (serializedInput) {
+                serializedInput.value = JSON.stringify(currentState);
+            }
+        }
+
+        function removeLocalFile(index) {
+            filesArray.splice(index, 1);
+            warning.style.display = "none";
+            syncFileInput();
+            updateSerializedInput();
+            renderFiles();
+        }
+
+        function removeDbFile(id, index) {
+            dbFilesArray.splice(index, 1);
+            removedDbIds.push(id);
+            if(removedInput) removedInput.value = removedDbIds.join(',');
+            warning.style.display = "none";
+            updateSerializedInput();
+            renderFiles();
+        }
+
+        function syncFileInput() {
+            if (!filePicker) return;
+            const dataTransfer = new DataTransfer();
+            filesArray.forEach(file => dataTransfer.items.add(file));
+            filePicker.files = dataTransfer.files;
+        }
+
+                function handlePoToggle() {
+            if (poToggle && requestTypeSelect) {
+                if (poToggle.checked) {
+                    // Force the value and the disabled state
+                    requestTypeSelect.value = "PO";
+                    requestTypeSelect.disabled = true;
+            
+                    // Add a class for extra visual confirmation if needed
+                    requestTypeSelect.classList.add('opacity-50');
+                } else {
+                    // Re-enable and reset
+                    requestTypeSelect.disabled = false;
+                    requestTypeSelect.classList.remove('opacity-50');
+            
+                    // Default back to "Normal" if it was set to None
+                    if (requestTypeSelect.value === "PO") {
+                        requestTypeSelect.value = "Normal";
+                    }
+                }
+            }
+        }
+
+        function renderFiles() {
+            if (!fileListContainer) return;
+            fileListContainer.innerHTML = "";
+            const totalCount = filesArray.length + dbFilesArray.length;
+            if(filePicker) filePicker.disabled = totalCount >= maxFiles;
+
+            dbFilesArray.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = "d-flex justify-content-between align-items-center p-2 border rounded mb-2 bg-light text-dark shadow-sm border-start border-4 border-success";
+                div.innerHTML = `
+                    <span class="small text-truncate"><i class="bi bi-cloud-check-fill text-success me-2"></i>${file.name}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeDbFile(${file.id}, ${index})"><i class="bi bi-trash"></i></button>
+                `;
+                fileListContainer.appendChild(div);
+            });
+
+            filesArray.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = "d-flex justify-content-between align-items-center p-2 border rounded mb-2 bg-white shadow-sm";
+                div.innerHTML = `
+                    <span class="small text-truncate"><i class="bi bi-file-earmark-plus text-primary me-2"></i>${file.name}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeLocalFile(${index})"><i class="bi bi-trash"></i></button>
+                `;
+                fileListContainer.appendChild(div);
+            });
+
+            if(submitBtn) {
+                submitBtn.disabled = totalCount === 0;
+            }
+        }
+
+        const formEl = document.getElementById('procurementForm');
+        if (formEl) {
+            formEl.addEventListener('submit', function (e) {
+                e.preventDefault(); // Halt default broken form routing
+
+                // Re-enable disabled input to ensure it is sent in FormData
+                if (requestTypeSelect.disabled) {
+                    requestTypeSelect.disabled = false;
+                }
+
+                const totalCount = filesArray.length + dbFilesArray.length;
+                if (totalCount === 0) {
+                    alert("You must leave or upload at least 1 supplier quote.");
+                    return;
+                }
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Running Document Extraction AI...`;
+                }
+
+                // Update hidden inputs for DB tracking
+                if (removedInput) {
+                    removedInput.value = removedDbIds.join(',');
+                }
+                updateSerializedInput();
+
+                // Construct programmatic multipart payload
+                const formData = new FormData(formEl);
+                
+                // Clear out and map files sequentially
+                formData.delete('QuoteFiles');
+                filesArray.forEach(file => {
+                    formData.append('QuoteFiles', file);
+                });
+
+                fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                    } else {
+                        return response.text();
+                    }
+                })
+                .then(html => {
+                    if (html) {
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    }
+                })
+                .catch(err => {
+                    console.error("Transmission error encountered", err);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = "Proceed to Review";
+                    }
+                });
+            });
+        }
+
+        const reviewFormEl = document.getElementById('reviewForm');
+        if(reviewFormEl) {
+            reviewFormEl.addEventListener('submit', function() {
+                const saveBtn = document.getElementById('saveBtn');
+                if(saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Finalizing Routing Context...`;
+                }
+            });
+        }
+    </script>
+}

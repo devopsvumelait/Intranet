@@ -1,0 +1,127 @@
+﻿@page
+@model Intranet.Pages.Account.LoginModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <style>
+            body {
+                background-image: url('/images/CoverPage1.jpg');
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0;
+            }
+
+                body::before {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.2);
+                    z-index: -1;
+                }
+
+            .login-card {
+                border: none;
+                border-radius: 15px;
+                box-shadow: 0 15px 35px rgba(0,0,0,1);
+                overflow: hidden;
+                max-width: 400px;
+                width: 100%;
+            }
+
+            .login-header {
+                background: #212529;
+                color: white;
+                padding: 30px;
+                text-align: center;
+            }
+    </style>
+</head>
+
+<body>
+    <div class="login-card card">
+
+        <div class="login-header">
+            <img src="~/images/Vumela_logo_white.png" class="mb-3" style="max-width: 310px;">
+            <p class="small text-white-50 mb-0">Procurement Management System</p>
+        </div>
+
+        <div class="card-body p-4">
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger small">
+                    @Model.ErrorMessage
+                </div>
+            }
+
+            <form method="post">
+
+                <!-- EMAIL -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Company Email</label>
+
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-envelope"></i>
+                        </span>
+
+                        <input asp-for="Email"
+                               type="email"
+                               class="form-control"
+                               placeholder="name@vumela.com"
+                               required />
+                    </div>
+                </div>
+
+                <!-- PASSWORD (NEW ADDITION) -->
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Password</label>
+
+                    <div class="input-group">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-lock"></i>
+                        </span>
+
+                        <input asp-for="Password"
+                               type="password"
+                               class="form-control"
+                               placeholder="Enter password"
+                               required />
+                    </div>
+                </div>
+
+                <!-- SUBMIT -->
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-dark py-2">
+                        Sign In
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <div class="card-footer bg-white border-0 text-center pb-4">
+            <small class="text-muted">
+                Use your registered corporate email to continue.
+            </small>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,279 @@
+﻿@using Intranet.Services
+@using Intranet.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@inject AppDbContext _context
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Intranet</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+            /* Custom highlight for the active page */
+            .navbar-dark .navbar-nav .nav-link.active-page {
+                color: #0dcaf0 !important; /* Bright Cyan/Info color */
+                font-weight: 800;
+                border-bottom: 2px solid #0dcaf0;
+            }
+        
+            .dropdown-item.active-page {
+                background-color: #0dcaf0 !important;
+                color: #000 !important;
+                font-weight: bold;
+            }
+    </style>
+</head>
+<body class="@(User.Identity.IsAuthenticated ? "" : "bg-light")">
+    
+    @if (User.Identity.IsAuthenticated)
+    {
+        // Logic to fetch current page for highlighting
+        var currentPage = ViewContext.RouteData.Values["page"]?.ToString();
+
+        // Permissions breakdown
+        var isTopTier = User.IsInRole("Executive") || User.IsInRole("HOO") || User.IsInRole("HOS") || User.IsInRole("MD");
+        var isFinance = User.IsInRole("Finance");
+        var isManager = User.IsInRole("Manager");
+
+        var userEmail = User.FindFirstValue(ClaimTypes.Email)
+             ?? User.FindFirstValue("email")
+             ?? User.FindFirstValue("preferred_username")
+             ?? string.Empty;
+
+        // Force true for Shalen regardless of her assigned role claims
+        var isSpecialProcurementManager = userEmail.Trim().Equals("stephanie.chetty@vumelait.co.za", StringComparison.OrdinalIgnoreCase);
+
+        // Logic to fetch unread notifications for the bell icon
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        List<Notification> unreadNotifs = new();
+        if (Guid.TryParse(userIdString, out Guid currentUserId))
+        {
+            unreadNotifs = await _context.Notifications
+                .Where(n => n.UserId == currentUserId && !n.IsRead)
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
+        }
+
+        <header>
+            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-dark bg-dark border-bottom box-shadow mb-4">
+                <div class="container">
+                    <img src="~/images/Vumela_logo_white.png" class="mb-3" style="max-width: 110px; margin-right: 15px; margin-top: 10px;">
+                    @*<a class="navbar-brand fw-bold" asp-page="/Index">VUMELA INTRANET</a>*@
+                    <button class="navbar-toggler" type="button" @*data-bs-toggle="collapse" data-bs-target=".navbar-collapse"*@>
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                        <ul class="navbar-nav flex-grow-1">
+
+                            @* 1. Dashboard & Pending Queue: Top-Tier + The Special Procurement Manager *@
+                            @if (isTopTier)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Approvals/Dashboard" ? "active-page" : "")"
+                                       asp-page="/Procurement/Approvals/Dashboard">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Approvals/PendingQueue" ? "active-page" : "")" asp-page="/Procurement/Approvals/PendingQueue">Pending Queue</a>
+                                </li>
+                            }
+
+                            
+                            @* 2. Regular Managers (excluding the special one if they shouldn't see MyRequests, or keep both) *@
+                            @if (isManager)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Manager/MyRequests" ? "active-page" : "")"
+                                       asp-page="/Procurement/Manager/MyRequests">My Requests</a>
+                                </li>
+                            }
+
+                            @* 3. Finance Hub Dropdown *@
+                            @if (isFinance || isTopTier)
+                            {
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle @(currentPage != null && currentPage.Contains("/Finance/") && !currentPage.Contains("Dashboard") ? "active-page" : "")"
+                                       href="#" role="button" data-bs-toggle="dropdown">
+                                        Finance Hub
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-dark">
+                                        <li>
+                                            <a class="dropdown-item @(currentPage == "/Procurement/Finance/PaymentQueue" ? "active-page" : "")" asp-page="/Procurement/Finance/PaymentQueue">
+                                                <i class="bi bi-credit-card me-2"></i>Payment Queue
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item @(currentPage == "/Procurement/Finance/Audit" ? "active-page" : "")" asp-page="/Procurement/Finance/Audit">
+                                                <i class="bi bi-archive me-2"></i>Audit Archive
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item @(currentPage == "/Procurement/Finance/ProcRegister" ? "active-page" : "")" asp-page="/Procurement/Finance/ProcRegister">
+                                                <i class="bi bi-list-check me-2"></i>Procurement Register
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            }
+
+                            @* 4. Reports & Archive: Visible to Top-Tier, Finance, and Managers *@
+                            @if (isManager || isTopTier || isFinance)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Reports" ? "active-page" : "")" asp-page="/Procurement/Reports">Reports</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Archive" ? "active-page" : "")" asp-page="/Procurement/Archive">Archive</a>
+                                </li>
+                            }
+
+                            @if (isSpecialProcurementManager)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link @(currentPage == "/Procurement/Finance/ProcRegister" ? "active-page" : "")"
+                                       asp-page="/Procurement/Finance/ProcRegister">Procurement Register</a>
+                                </li>
+                            }
+
+                            @* 5. MD / Admin Specific Options *@
+                            @* 5. Admin / Management Specific Options *@
+@if (User.IsInRole("MD") || User.IsInRole("Finance") || User.IsInRole("HOO") || User.IsInRole("HOS") || User.IsInRole("Admin"))
+{
+    <li class="nav-item">
+        <a class="nav-link @(currentPage == "/Procurement/Admin/Admin" ? "active-page" : "")" asp-page="/Procurement/Admin/Admin">Admin Page</a>
+    </li>
+}
+                        </ul>
+                        
+                        <ul class="navbar-nav align-items-center">
+                            @* Persistent Notification Bell Dropdown *@
+                            <li class="nav-item dropdown me-3">
+                                <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-bell fs-5"></i>
+                                    @if (unreadNotifs.Any())
+                                    {
+                                        <span class="position-absolute top-2 start-75 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                            @unreadNotifs.Count
+                                        </span>
+                                    }
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 py-0" style="width: 320px; max-height: 450px; overflow-y: auto;">
+                                    <li class="bg-light px-3 py-2 d-flex justify-content-between align-items-center border-bottom sticky-top">
+                                        <span class="fw-bold small text-dark">Recent Notifications</span>
+                                        @if (unreadNotifs.Any())
+                                        {
+                                            <form method="post" asp-page="/Procurement/Notifications" asp-page-handler="MarkAllRead" asp-route-returnUrl="@Context.Request.Path">
+                                                <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none small" style="font-size: 0.75rem;">Mark all read</button>
+                                            </form>
+                                        }
+                                    </li>
+                                    
+                                    @if (!unreadNotifs.Any())
+                                    {
+                                        <li class="px-3 py-4 text-center text-muted">
+                                            <i class="bi bi-check2-circle d-block mb-2 fs-4"></i>
+                                            <span class="small">All caught up!</span>
+                                        </li>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var n in unreadNotifs.Take(5))
+                                        {
+                                            <li>
+                                                @{
+                                                    var detailLink = "/Procurement/Manager/Details";
+                                                    if (User.IsInRole("Executive") || User.IsInRole("HOO") || User.IsInRole("HOS") || User.IsInRole("MD"))
+                                                    {
+                                                        detailLink = "/Procurement/Approvals/Review";
+                                                    }
+                                                    else if (User.IsInRole("Finance"))
+                                                    {
+                                                        detailLink = "/Procurement/Finance/Details";
+                                                    }
+                                                }
+                                                <a class="dropdown-item px-3 py-2 border-bottom" asp-page="@detailLink" asp-route-id="@n.RequestId">
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="fw-bold small text-primary">@n.Title</span>
+                                                        <span class="text-muted" style="font-size: 0.7rem;">
+                                                            @(n.CreatedAt?.ToString("MMM dd") ?? "N/A")
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-wrap small text-dark mt-1" style="font-size: 0.8rem; line-height: 1.2;">
+                                                        @n.Message
+                                                    </div>
+                                                </a>
+                                            </li>
+                                        }
+                                    }
+                                    <li>
+                                        <a class="dropdown-item text-center small fw-bold py-2 text-muted" asp-page="/Procurement/Notifications">
+                                            View All Activity
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-person-circle me-1"></i> @User.FindFirst("FullName")?.Value
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item text-danger" asp-page="/Account/Login" asp-page-handler="Logout">Logout</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+    }
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    @if (User.Identity.IsAuthenticated)
+    {
+        <footer class="border-top footer text-muted bg-white">
+            <div class="container py-3 small">
+                &copy; 2026 - Vumela IT Procurement Management System
+            </div>
+        </footer>
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+            document.addEventListener("submit", function (e) {
+                // If the form submission lifecycle was intercepted or belongs to the custom upload sequence, pass through smoothly
+                if (e.defaultPrevented || (e.target && e.target.id === "procurementForm")) {
+                    return;
+                }
+
+                const submitButton = e.submitter;
+                if (submitButton && submitButton.type === "submit") {
+                    setTimeout(() => {
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Processing...`;
+                    }, 0);
+                }
+            });
+
+            window.onpageshow = function(event) {
+                if (event.persisted) {
+                    window.location.reload();
+                }
+            };
+    </script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,168 @@
+﻿@page
+@model Intranet.Pages.Procurement.Manager.DescriptionModel
+@{
+    ViewData["Title"] = "Finalize Procurement Request";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-bottom pb-0 pt-4 px-4">
+                    <h4 class="mb-1 text-dark">Finalize Details</h4>
+                    <p class="text-muted small">Confirm the extracted supplier information and add any final details before submission.</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" asp-page-handler="SaveRequest" id="finalizeForm">
+                        @Html.AntiForgeryToken()
+                        
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
+
+                        <input type="hidden" asp-for="SelectedQuoteId" />
+                        <input type="hidden" asp-for="HiddenTotalAmount" />
+                        <input type="hidden" asp-for="BlobUrl" />
+                        <input type="hidden" asp-for="RequestType" />
+                       
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Mandatory Supplier Name
+                                <span class="text-primary fw-normal">Extracted name: @Model.SuggestedSupplierName</span>
+                            </label>
+    
+                            <input asp-for="Input.SupplierName"
+                                   class="form-control bg-light border-0 text-dark fw-semibold"
+                                   placeholder="Manually type the supplier name here to confirm..."
+                                   required />
+           
+                            <span asp-validation-for="Input.SupplierName" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <label asp-for="Input.DepartmentType" class="form-label fw-bold">Department</label>
+                                <select asp-for="Input.DepartmentType" asp-items="@(new SelectList(Model.DepartmentOptions))" class="form-select bg-light border-0">
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.CustomerName" class="form-label fw-bold">Customer Name</label>
+                                <input asp-for="Input.CustomerName" class="form-control bg-light border-0" required />
+                            </div>
+                            <div class="col-md-4">
+                                <label asp-for="Input.QuoteType" class="form-label fw-bold">Quote Type</label>
+                                <select asp-for="Input.QuoteType" asp-items="@(new SelectList(Model.QuoteTypeOptions))" class="form-select bg-light border-0">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.Description" class="form-label fw-bold">Motivation</label>
+                            <textarea asp-for="Input.Description" class="form-control bg-light border-0" rows="3" required></textarea>
+                            <span asp-validation-for="Input.Description" class="text-danger small"></span>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label asp-for="Input.CostType" class="form-label fw-bold">Expense Type</label>
+                                <select asp-for="Input.CostType" class="form-select bg-light border-0">
+                                    <option value="Projects">Projects</option>
+                                    <option value="BAU">BAU (Business As Usual)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="Input.PaymentTiming" class="form-label fw-bold">Payment Timing</label>
+                                <select asp-for="Input.PaymentTiming" id="paymentTimingInput" class="form-select bg-light border-0">
+                                    <option value="Immediate">Immediate</option>
+                                    <option value="Future Dated">Future Dated</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 d-none" id="futureDateContainer">
+                            <label asp-for="Input.FutureDate" class="form-label fw-bold">Target Payment/Execution Date</label>
+                            <input type="date" asp-for="Input.FutureDate" id="futureDateInput" class="form-control bg-light border-0" />
+                            <span asp-validation-for="Input.FutureDate" class="text-danger small"></span>
+                        </div>
+
+                        <div class="card mb-4 shadow-sm">
+                            <div class="card-body">
+                                <h5 class="card-title text-primary">Procurement Category</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Request Type</label>
+                                        <div class="p-2 bg-light border rounded text-muted">
+                                            @if (Model.RequestType == "PO")
+                                            {
+                                                <i class="bi bi-shield-check text-success me-2"></i> <strong>Purchase Order (PO) Request</strong>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-file-earmark-text me-2"></i> 
+                                                @Model.RequestType
+                                            }
+                                        </div>
+                                        <input type="hidden" asp-for="RequestType" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-light rounded mb-4 border-start border-4 border-success d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-muted small d-block">Allocated Quote Amount</span>
+                                <strong class="text-dark">Reviewing uploaded item records</strong>
+                            </div>
+                            <span class="h4 mb-0 fw-bold text-success">R @Model.HiddenTotalAmount.ToString("N2")</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center border-top pt-4">
+                            <a asp-page="./Create" class="btn btn-link text-muted text-decoration-none">Back to Wizard</a>
+                            <button type="submit" id="saveBtn" class="btn btn-success px-4 py-2 fw-bold shadow-sm">
+                                Commit & Save Request
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const paymentTimingInput = document.getElementById('paymentTimingInput');
+        const futureDateContainer = document.getElementById('futureDateContainer');
+        const futureDateInput = document.getElementById('futureDateInput');
+
+        function toggleDateVisibility() {
+            if (paymentTimingInput && futureDateContainer && futureDateInput) {
+                if (paymentTimingInput.value === "Future Dated") {
+                    futureDateContainer.classList.remove('d-none');
+                    futureDateInput.setAttribute('required', 'required');
+                } else {
+                    futureDateContainer.classList.add('d-none');
+                    futureDateInput.removeAttribute('required');
+                    futureDateInput.value = "";
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            toggleDateVisibility();
+            if (paymentTimingInput) {
+                paymentTimingInput.addEventListener('change', toggleDateVisibility);
+            }
+        });
+
+        const finalizeForm = document.getElementById('finalizeForm');
+        if (finalizeForm) {
+            finalizeForm.addEventListener('submit', function () {
+                const saveBtn = document.getElementById('saveBtn');
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Committing Records...`;
+                }
+            });
+        }
+    </script>
+}

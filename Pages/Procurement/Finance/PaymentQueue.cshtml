@@ -1,0 +1,130 @@
+﻿@page
+@model Intranet.Pages.Procurement.Finance.PaymentQueue
+@{
+    ViewData["Title"] = "Finance Payment Hub";
+}
+
+<div class="container mt-4">
+    <div class="card shadow-sm mb-4 bg-dark text-white">
+        <div class="card-body d-flex justify-content-between align-items-center">
+
+            <div>
+                <h4 class="mb-0">👋 Welcome, @Model.UserFullName</h4></h4>
+
+            </div>
+
+            <div class="text-start">
+                <div id="dateTime" class="fw-bold text-white"></div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+            function updateDateTime() {
+                const now = new Date();
+                document.getElementById("dateTime").innerText =
+                    now.toLocaleDateString() + " " + now.toLocaleTimeString();
+            }
+
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+    </script>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h3 class="fw-bold text-dark">Finance Payment Hub</h3>
+            <p class="text-muted">Manage the full disbursement lifecycle from payment to final audit.</p>
+        </div>
+    </div>
+
+    <style>
+            #pills-tab {
+                display: flex;
+                white-space: nowrap;
+            }
+
+                #pills-tab .nav-link {
+                    padding-left: 10px !important;
+                    padding-right: 10px !important;
+                    font-size: 0.96rem;
+                }
+    </style>
+
+    <ul class="nav nav-tabs mb-4" id="pills-tab" role="tablist">
+    </ul>
+
+    @* Original UI Navigation Tabs *@
+    <ul class="nav nav-tabs mb-4" id="pills-tab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold" id="present-tab" data-bs-toggle="tab" data-bs-target="#present" type="button">
+                Present Dated <span class="badge bg-danger ms-2">@Model.PresentDatedQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-dark fw-bold" id="future-tab" data-bs-toggle="tab" data-bs-target="#future" type="button">
+                Future Dated <span class="badge bg-secondary ms-2">@Model.FutureDatedQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-dark fw-bold" id="Waybill-tab" data-bs-toggle="tab" data-bs-target="#Waybill" type="button">
+                Waybill <span class="badge bg-secondary ms-2">@Model.WaybillQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-dark fw-bold" id="online-tab" data-bs-toggle="tab" data-bs-target="#online" type="button">
+                Online <span class="badge bg-secondary ms-2">@Model.OnlineQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-primary fw-bold" id="po-upload-tab" data-bs-toggle="tab" data-bs-target="#poUpload" type="button">
+                Awaiting PO Upload <span class="badge bg-primary ms-2">@Model.PoUploadQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-dark fw-bold" id="invoice-tab" data-bs-toggle="tab" data-bs-target="#invoice" type="button">
+                Out with Managers <span class="badge bg-warning text-dark ms-2">@Model.AwaitingInvoiceQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-dark fw-bold" id="verify-tab" data-bs-toggle="tab" data-bs-target="#verify" type="button">
+                Awaiting Verification <span class="badge bg-info text-dark ms-2">@Model.AwaitingVerificationQueue.Count</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link text-success fw-bold" id="po-table-tab" data-bs-toggle="tab" data-bs-target="#poTable" type="button">
+                PO Accounts <span class="badge bg-success ms-2">@Model.PoActiveTable.Count</span>
+            </button>
+        </li>
+
+    </ul>
+
+    @* Tab Content Panels *@
+    <div class="tab-content" id="pills-tabContent">
+        <div class="tab-pane fade show active" id="present">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.PresentDatedQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="future">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.FutureDatedQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="Waybill">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.WaybillQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="online">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.OnlineQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="poUpload">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.PoUploadQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="invoice">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.AwaitingInvoiceQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="verify">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.AwaitingVerificationQueue)</div>
+        </div>
+        <div class="tab-pane fade" id="poTable">
+            <div class="card border-0 shadow-sm">@await Html.PartialAsync("_PaymentTablePartial", Model.PoActiveTable)</div>
+        </div>
+    </div>
+</div>

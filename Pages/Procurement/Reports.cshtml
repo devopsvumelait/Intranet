@@ -1,0 +1,628 @@
+﻿@page
+@model Intranet.Pages.Procurement.ReportsModel
+@{
+    var canViewHighValue = Model.CanViewHighValueMDQueue ? "true" : "false";
+}
+
+@{
+    ViewData["Title"] = "Procurement Reports";
+
+    string FormatTabName(string key) => key switch
+    {
+        "AcceptedWaitingOnFinance" => "Accepted / Finance",
+        "PaidPendingOnManager" => "Paid / Invoice",
+        "PendingOnMD" => "Pending On MD",
+        "PendingOnHead" => "Pending On Head",
+        _ => key
+    };
+}
+
+<div class="container-fluid mt-4">
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0">Procurement Reports</h3>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body bg-light rounded">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Keyword Search</label>
+                        <div class="input-group shadow-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" name="SearchTerm" value="@Model.SearchTerm"
+                                   class="form-control border-start-0" placeholder="Search ID, Supplier Name, Motivation, Customer Name or Requester...">
+                        </div>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Department</label>
+                        <select name="DepartmentFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="EUC" selected="@(Model.DepartmentFilter == "EUC")">EUC</option>
+                            <option value="Networks" selected="@(Model.DepartmentFilter == "Networks")">Networks</option>
+                            <option value="Cabling" selected="@(Model.DepartmentFilter == "Cabling")">Cabling</option>
+                            <option value="ADHOC" selected="@(Model.DepartmentFilter == "ADHOC")">ADHOC</option>
+                        </select>
+                    </div>
+        
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Cost Type</label>
+                        <select name="costType" class="form-select" style="width: 140px;">
+                            <option value="">All</option>
+                            <option value="Projects" selected="@(Model.CostType == "Projects")">Projects</option>
+                            <option value="BAU" selected="@(Model.CostType == "BAU")">BAU</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Request Type</label>
+                        <select name="RequestTypeFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Normal" selected="@(Model.RequestTypeFilter == "Normal")">Normal</option>
+                            <option value="Online" selected="@(Model.RequestTypeFilter == "Online")">Online</option>
+                            <option value="Waybill" selected="@(Model.RequestTypeFilter == "Waybill")">Waybill</option>
+                            <option value="PO" selected="@(Model.RequestTypeFilter == "PO")">PO</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Quote Type</label>
+                        <select name="QuoteTypeFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Accomodation" selected="@(Model.QuoteTypeFilter == "Accomodation")">Accomodation</option>
+                            <option value="Courier" selected="@(Model.QuoteTypeFilter == "Courier")">Courier</option>
+                            <option value="Flights" selected="@(Model.QuoteTypeFilter == "Flights")">Flights</option>
+                            <option value="Fuel" selected="@(Model.QuoteTypeFilter == "Fuel")">Fuel</option>
+                            <option value="Health And Safety" selected="@(Model.QuoteTypeFilter == "Health and Safety")">Health and Safety</option>
+                            <option value="Legal Fees" selected="@(Model.QuoteTypeFilter == "Legal Fees")">Legal Fees</option>
+                            <option value="Medicals" selected="@(Model.QuoteTypeFilter == "Medicals")">Medicals</option>
+                            <option value="Networking Expense" selected="@(Model.QuoteTypeFilter == "Networking Expense")">Networking Expense</option>
+                            <option value="PPE" selected="@(Model.QuoteTypeFilter == "PPE")">PPE</option>
+                            <option value="S&T" selected="@(Model.QuoteTypeFilter == "S&T")">S&T</option>
+                            <option value="Security Clearance" selected="@(Model.QuoteTypeFilter == "Security Clearance")">Security Clearance</option>
+                            <option value="Small Assets" selected="@(Model.QuoteTypeFilter == "Small Assets")">Small Assets</option>
+                            <option value="Staff Welfare" selected="@(Model.QuoteTypeFilter == "Staff Welfare")">Staff Welfare</option>
+                            <option value="Team Builds" selected="@(Model.QuoteTypeFilter == "Team Builds")">Team Builds</option>
+                            <option value="Telephone And Internet" selected="@(Model.QuoteTypeFilter == "Telephone And Internet")">Telephone And Internet</option>
+                            <option value="Tool Hire" selected="@(Model.QuoteTypeFilter == "Tool Hire")">Tool Hire</option>
+                            <option value="Training" selected="@(Model.QuoteTypeFilter == "Training")">Training</option>
+                            <option value="Vehicle Expense" selected="@(Model.QuoteTypeFilter == "Vehicle Expense")">Vehicle Expense</option>
+                            <option value="Vehicle Hire" selected="@(Model.QuoteTypeFilter == "Vehicle Hire")">Vehicle Hire</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Final Status</label>
+                        <select name="StatusFilter" class="form-select shadow-sm">
+                            <option value="">All</option>
+                            <option value="Pending" selected="@(Model.StatusFilter == "Pending")">Pending</option>
+                            <option value="PO_Payment_Queue" selected="@(Model.StatusFilter == "PO_Payment_Queue")">PO Payment Queue</option>
+                            <option value="Closed" selected="@(Model.StatusFilter == "Closed")">Closed / Paid</option>
+                            <option value="Rejected" selected="@(Model.StatusFilter == "Rejected")">Rejected / Denied</option>
+
+                        </select>
+                    </div>
+
+        
+
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Start Date</label>
+                        <input type="date" name="startDate" class="form-control" value="@Model.StartDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+                
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted text-uppercase">End Date</label>
+                        <input type="date" name="endDate" class="form-control" value="@Model.EndDate?.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="col-md-4 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-dark">Apply Filters</button>
+                        <a asp-page="/Procurement/Reports" class="btn btn-outline-secondary">Clear</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <ul class="nav nav-pills" id="reportTypeTabs">
+
+                        <li class="nav-item">
+                            <button class="nav-link active"
+                                    type="button"
+                                    data-report="requestLogs"
+                                    onclick="showReport('requestLogs')">
+                                Request Logs
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    type="button"
+                                data-report="departmentAnalysis"
+                                onclick="showReport('departmentAnalysis')">
+                                Department Analysis
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    type="button"
+                            data-report="vendorPerformance"
+                            onclick="showReport('vendorPerformance')">
+                                Supplier Performance
+                            </button>
+                        </li>
+
+                        <li class="nav-item">
+                            <button class="nav-link"
+                                    type="button"
+                        data-report="budgetTracking"
+                        onclick="showReport('budgetTracking')">
+                                Budget Tracking
+                            </button>
+                        </li>
+
+                       @* <li class="nav-item">
+                            <button class="nav-link"
+                                    type="button"
+                    data-report="auditTrail"
+                                    onclick="showReport('auditTrail')">
+                                Audit Trail
+                            </button>
+                        </li> *@
+
+                    </ul>
+                </div>
+            </div>
+
+
+            <div class="mb-4">
+                <a id="globalExportBtn"
+                       asp-page-handler="Export"
+                       asp-route-tab="All"
+                       asp-route-costType="@Model.CostType"
+                       asp-route-deptId="@Model.SelectedDeptId"
+                       asp-route-startDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+                       asp-route-endDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+                       asp-route-searchTerm="@Model.SearchTerm"
+                       asp-route-statusFilter="@Model.StatusFilter"
+                       asp-route-deptFilter="@Model.DepartmentFilter"
+                       asp-route-reqType="@Model.RequestTypeFilter"
+                       asp-route-quoteType="@Model.QuoteTypeFilter"
+                       class="btn btn-success fw-bold">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Download Excel Report
+                </a>
+                <a asp-page="/Procurement/ReportArchives" class="btn btn-outline-primary ms-1">
+                    <i class="bi bi-clock-history me-1"></i> View Archives
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPORT CONTAINER -->
+    <div id="requestLogs" class="report-section">
+    <div class="row g-3 mb-4 flex-nowrap overflow-auto">
+        <div class="col">
+            <div class="card border-0 border-start border-primary border-4 shadow-sm p-3 h-100">
+                <div class="text-muted small fw-bold text-uppercase">Accepted / Finance</div>
+                <h4 class="mb-0 mt-1 fw-bold text-dark">@Model.AcceptedWaitingOnFinance</h4>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 border-start border-warning border-4 shadow-sm p-3 h-100">
+                <div class="text-muted small fw-bold text-uppercase">Pending Review</div>
+                <h4 class="mb-0 mt-1 fw-bold text-dark">@Model.Pending</h4>
+            </div>
+        </div>
+        @if (!User.IsInRole("Finance"))
+        {
+            <div class="col">
+                <div class="card border-0 border-start border-danger border-4 shadow-sm p-3 h-100">
+                    <div class="text-muted small fw-bold text-uppercase">Denied</div>
+                    <h4 class="mb-0 mt-1 fw-bold text-dark">@Model.Denied</h4>
+                </div>
+            </div>
+        }
+        <div class="col">
+            <div class="card border-0 border-start border-info border-4 shadow-sm p-3 h-100">
+                <div class="text-muted small fw-bold text-uppercase">Paid / Invoice</div>
+                <h4 class="mb-0 mt-1 fw-bold text-dark">@Model.PaidPendingOnManager</h4>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 border-start border-success border-4 shadow-sm p-3 h-100">
+                <div class="text-muted small fw-bold text-uppercase">Closed Log</div>
+                <h4 class="mb-0 mt-1 fw-bold text-dark">@Model.Closed</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4 justify-content-center">
+        <div class="col-lg-5 col-md-7">
+            <div class="card p-3 shadow-sm mx-auto" style="height: 280px; bg-white">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+
+    <ul class="nav nav-pills mb-3 shadow-sm rounded bg-white p-2 flex-wrap" id="reportTabs" role="tablist">
+        @foreach (var tab in Model.Tabs)
+        {
+                <li class="nav-item " role="presentation">
+                <button class="nav-link @(tab.Key == "All" ? "active" : "") px-3 py-1.5 m-1 rounded-pill fw-bold text-nowrap transition-all"
+                        id="btn-tab-@tab.Key"
+                        data-bs-toggle="pill"
+                        data-bs-target="#tab-@tab.Key"
+                        type="button"
+                        role="tab"
+                        onclick="updateExportTarget('@tab.Key')">
+                    <span>@FormatTabName(tab.Key)</span>
+                    <span class="badge rounded-pill bg-secondary ms-1 small">@tab.Value.Count</span>
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content" id="reportTabsContent">
+        @foreach (var tab in Model.Tabs)
+        {
+            <div class="tab-pane fade @(tab.Key == "All" ? "show active" : "")" id="tab-@tab.Key" role="tabpanel">
+                <div class="mb-3 mt-2 d-flex justify-content-between align-items-center">
+                    <h6 class="text-muted mb-0 font-monospace">Filtered Stream Segment: @FormatTabName(tab.Key)</h6>
+                    <a asp-page-handler="Export"
+                           asp-route-tab="@tab.Key"
+                           asp-route-costType="@Model.CostType"
+                           asp-route-deptId="@Model.SelectedDeptId"
+                           asp-route-startDate="@Model.StartDate?.ToString("yyyy-MM-dd")"
+                           asp-route-endDate="@Model.EndDate?.ToString("yyyy-MM-dd")"
+                           asp-route-searchTerm="@Model.SearchTerm"
+                           asp-route-statusFilter="@Model.StatusFilter"
+                           asp-route-deptFilter="@Model.DepartmentFilter"
+                           asp-route-reqType="@Model.RequestTypeFilter"
+                           asp-route-quoteType="@Model.QuoteTypeFilter"
+                           class="btn btn-outline-success btn-sm fw-bold">
+                        <i class="bi bi-download me-1"></i> Export Segment
+                    </a>
+                </div>
+
+                @if (tab.Value != null && tab.Value.Any())
+                {
+                    <div class="card border-0 shadow-sm">
+                        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light small text-uppercase position-sticky top-0" style="z-index: 1;">
+                                    <tr>
+                                        <th class="ps-3">#</th>
+                                        <th>Requester</th>
+                                        <th>Supplier Name</th>
+                                        <th>Department</th>
+                                        <th>Cost Type</th>
+                                        <th>Customer Name</th>
+                                        <th>Quote Type</th>
+                                        <th>Date Created</th>
+                                        <th>Amount</th>
+                                        <th class="pe-3">Status</th>
+                                        <th class="text-end pe-4">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in tab.Value)
+                                    {
+                                        <tr>
+                                            <td class="text-muted ps-3 small">#@item.Id</td>
+                                            <td>@item.Requester?.FirstName @item.Requester?.Surname</td>
+                                            <td class="text-primary small fw-bold">@(item.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "Unassigned")</td>
+                                            <td>
+                                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.DepartmentType</div>
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border">@item.CostType</span></td>
+                                            
+                                            <td>
+                                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.CustomerName</div>
+                                            </td>
+                                            <td>
+                                                <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.QuoteType</div>
+                                            </td>
+                                            <td class="small text-muted">@item.CreatedAt?.ToString("dd/MM/yy")</td>
+                                            <td class="fw-bold">R @item.TotalAmount.ToString("N2")</td>
+                                            <td class="pe-1">
+                                                <span class="badge @(item.Status == "Closed" ? "bg-success" : item.Status.Contains("Rejected") ? "bg-danger" : "bg-dark")">
+                                                    @item.Status
+                                                </span>
+                                            </td>
+                                            <td class="text-end pe-0">
+                                                <a asp-page="/Procurement/Manager/Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-dark px-3 shadow-sm fw-bold">
+                                                    <i class="bi bi-eye me-1"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card p-4 text-center border-0 shadow-sm text-muted">
+                        <i class="bi bi-folder-x display-6 text-muted mb-2"></i>
+                        <div>No active records mapped to this segment loop filter array.</div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+</div>
+
+<div id="departmentAnalysis" class="report-section" style="display:none;">
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold">Department Spend Analysis</div>
+        <div class="card-body">
+
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Department</th>
+                        <th>Requests</th>
+                        <th>Total Spend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        @if (Model.DepartmentSpend != null && Model.DepartmentSpend.Any())
+                        {
+                    @foreach (var item in Model.DepartmentSpend)
+                    {
+                        <tr>
+                            <td>@item.Department</td>
+                            <td>@item.RequestCount</td>
+                            <td>R @item.TotalSpend.ToString("N2")</td>
+                        </tr>
+                    }
+                        }
+                </tbody>
+            </table>
+
+        </div>
+    </div>
+</div>
+
+
+    <div id="vendorPerformance" class="report-section" style="display:none;">
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold">Supplier Performance</div>
+        <div class="card-body">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Supplier</th>
+                        <th>Requests</th>
+                        <th>Total Spend</th>
+                        <th>Avg Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.VendorPerformance != null && Model.VendorPerformance.Any())
+                    {
+                        @foreach (var item in Model.VendorPerformance)
+                        {
+                            <tr>
+                                <td>@item.Vendor</td>
+                                <td>@item.Requests</td>
+                                <td>R @item.TotalSpend.ToString("N2")</td>
+                                <td>R @item.AvgRequestValue.ToString("N2")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No vendor performance data available for this selection.</td>
+                        </tr>
+                    }
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+@*<div id="auditTrail" class="report-section" style="display:none;">
+    <div class="card shadow-sm">
+        <div class="card-header fw-bold">Audit Trail</div>
+        <div class="card-body text-muted">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Table</th>
+                            <th>Record</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in Model.AuditTrail)
+                        {
+                            <tr>
+                                <td>@log.Timestamp</td>
+                                <td>@log.UserName</td>
+                                <td>@log.ActionType</td>
+                                <td>@log.TableName</td>
+                                <td>@log.RecordId</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div> *@
+
+<div id="budgetTracking" class="report-section" style="display:none;">
+
+    <div class="row g-3">
+
+        <!-- Forecast Card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm p-3">
+                <div class="text-muted small fw-bold">Predicted Next Month Forecast</div>
+                <h3 class="fw-bold text-primary">
+                    R @Model.ForecastNextMonthSpend.ToString("N2")
+                </h3>
+            </div>
+        </div>
+
+        <!-- Top Suppliers -->
+        <div class="col-md-8">
+            <div class="card shadow-sm p-3">
+                <div class="fw-bold mb-2">Top 5 Suppliers</div>
+
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Supplier</th>
+                            <th>Spend</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.TopSuppliers)
+                        {
+                            <tr>
+                                <td>@s.Supplier</td>
+                                <td>R @s.TotalSpend.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="col-12">
+            <div class="card shadow-sm p-3">
+                <div style="height: 350px;">
+                    <canvas id="budgetChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Dynamically shifts tracking queries for excel generation matching browser navigation selections
+        function updateExportTarget(tabKey) {
+        const exportBtn = document.getElementById('globalExportBtn');
+        if (exportBtn) {
+        const url = new URL(exportBtn.href, window.location.origin);
+        url.searchParams.set('tab', tabKey);
+        exportBtn.href = url.pathname + url.search;
+        }
+        }
+
+        // Core Report Section Switching Logic (Available globally)
+        function showReport(id) {
+        document.querySelectorAll('.report-section')
+        .forEach(el => el.style.display = 'none');
+
+        const section = document.getElementById(id);
+        if (section) section.style.display = 'block';
+
+        document.querySelectorAll('#reportTypeTabs .nav-link')
+        .forEach(btn => btn.classList.remove('active'));
+
+        const activeBtn = document.querySelector(`[data-report="${id}"]`);
+        if (activeBtn) activeBtn.classList.add('active');
+
+        if (id === "budgetTracking" && window.budgetChartInstance) {
+        window.budgetChartInstance.resize();
+        }
+        }
+
+        // Status Pie Chart Initialization
+        const ctx = document.getElementById('statusChart');
+        const canViewHighValue = @(Model.CanViewHighValueMDQueue ? "true" : "false");
+        const isFinanceRole = @(User.IsInRole("Finance") ? "true" : "false");
+
+        let chartLabels, chartData, chartColors;
+
+        if (canViewHighValue) {
+        chartLabels = ['Accepted / Finance', 'Pending Review', 'Pending MD (>15k)', 'Denied', 'Paid / Invoice', 'Closed Log'];
+        chartData = [@Model.AcceptedWaitingOnFinance, @Model.Pending, @Model.PendingOnMD, @Model.Denied, @Model.PaidPendingOnManager, @Model.Closed];
+        chartColors = ['#0d6efd', '#ffc107', '#fd7e14', '#dc3545', '#0dcaf0', '#198754'];
+        } else if (isFinanceRole) {
+        chartLabels = ['Accepted / Finance', 'Pending Review', 'Paid / Invoice', 'Closed Log'];
+        chartData = [@Model.AcceptedWaitingOnFinance, @Model.Pending, @Model.PaidPendingOnManager, @Model.Closed];
+        chartColors = ['#0d6efd', '#ffc107', '#0dcaf0', '#198754'];
+        } else {
+        chartLabels = ['Accepted / Finance', 'Pending Review', 'Denied', 'Paid / Invoice', 'Closed Log'];
+        chartData = [@Model.AcceptedWaitingOnFinance, @Model.Pending, @Model.Denied, @Model.PaidPendingOnManager, @Model.Closed];
+        chartColors = ['#0d6efd', '#ffc107', '#dc3545', '#0dcaf0', '#198754'];
+        }
+
+        if (ctx) {
+        new Chart(ctx, {
+        type: 'pie',
+        data: {
+        labels: chartLabels,
+        datasets: [{
+        data: chartData,
+        backgroundColor: chartColors,
+        borderColor: '#ffffff',
+        borderWidth: 2
+        }]
+        },
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 12, font: { weight: 'bold' } } }
+        }
+        }
+        });
+        }
+    </script>
+
+    @if (Model.BudgetForecast != null)
+    {
+        <script>
+            const budgetLabels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.BudgetForecast.Select(x => x.Period)
+                ));
+
+            const actualData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.BudgetForecast.Select(x => x.Actual)
+                ));
+
+            const forecastData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    Model.BudgetForecast.Select(x => x.Forecast)
+                ));
+
+            const budgetCtx = document.getElementById('budgetChart');
+            if (budgetCtx) {
+            window.budgetChartInstance = new Chart(budgetCtx, {
+            type: 'line',
+            data: {
+            labels: budgetLabels,
+            datasets: [
+            { label: "Actual Spend", data: actualData, borderColor: '#0d6efd', tension: 0.3 },
+            { label: "Forecast", data: forecastData, borderColor: '#6c757d', borderDash: [6, 6], tension: 0.3 }
+            ]
+            },
+            options: {
+            responsive: true,
+            maintainAspectRatio: false
+            }
+            });
+            }
+        </script>
+    }
+}

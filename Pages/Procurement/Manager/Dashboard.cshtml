@@ -1,0 +1,210 @@
+﻿@page
+@model Intranet.Pages.Procurement.Manager.DashboardModel
+@{
+    ViewData["Title"] = "Manager Dashboard";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-0 text-dark">Welcome back, @Model.FullName</h3>
+            <p class="text-muted small">Here is the status of your procurement workflows.</p>
+        </div>
+        <a asp-page="/Procurement/Manager/Create" class="btn btn-dark shadow-sm">
+            + New Request
+        </a>
+    </div>
+
+    <div class="row mb-5 g-3">
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-3 bg-light">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">In Approval Queue</h6>
+                    <h2 class="mb-0 text-dark fw-bold">@Model.PendingCount</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-3 @(Model.PosToReviewCount > 0 ? "bg-success text-white border-start border-4 border-dark" : "bg-light")">
+                <div class="card-body">
+                    <h6 class="text-uppercase fw-bold mb-1 @(Model.PosToReviewCount > 0 ? "text-white-50" : "text-muted")" style="font-size: 0.75rem;">POs to Close</h6>
+                    <h2 class="mb-0 fw-bold">@Model.PosToReviewCount</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-3 @(Model.InvoicesToUploadCount > 0 ? "bg-warning text-white pulse-border" : "bg-light")">
+                <div class="card-body">
+                    <h6 class="text-uppercase fw-bold mb-1 @(Model.InvoicesToUploadCount > 0 ? "text-white-50" : "text-muted")" style="font-size: 0.75rem;">Pending Final Invoice</h6>
+                    <h2 class="mb-0 fw-bold">@Model.InvoicesToUploadCount</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-3 bg-light">
+                <div class="card-body">
+                    <h6 class="text-muted text-uppercase fw-bold mb-1" style="font-size: 0.75rem;">Rejected / Needs Review</h6>
+                    <h2 class="mb-0 text-dark fw-bold">@Model.RejectedCount</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between">
+                    <h6 class="mb-0 fw-bold">Recent Active Workflows</h6>
+                    <span class="badge bg-light text-dark">Showing 5 of @Model.TotalActiveCount</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 600px;">
+                        <thead class="table-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4">ID</th>
+                                <th>Supplier Name</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.ActiveRequests.Any())
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted py-4">No active requests.</td>
+                                </tr>
+                            }
+                            @foreach (var req in Model.ActiveRequests)
+                            {
+                                <tr>
+                                    <td class="ps-4 text-muted small">#@req.Id</td>
+                                    <td>
+                                        <div class="fw-bold text-dark text-truncate" style="max-width: 200px;">
+                                            @(req.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "No Supplier Found")
+                                        </div>
+                                    </td>
+                                    <td class="fw-medium text-truncate" style="max-width: 200px;">@req.Description</td>
+                                    <td class="text-nowrap">R @(req.TotalAmount.ToString("N2"))</td>
+                                    <td>
+                                        @if (req.Status.StartsWith("Pending"))
+                                        {
+                                            <span class="badge bg-warning text-dark border">@req.Status.Replace("_", " ")</span>
+                                        }
+                                        else if (req.Status == "PO_Issued" && req.IsPoRequired)
+                                        {
+                                            <span class="badge bg-success text-white border-0">PO Ready</span>
+                                        }
+                                        else if (req.Status == "Awaiting_Invoice")
+                                        {
+                                            <span class="badge bg-warning">Requires Invoice</span>
+                                        }
+                                        else if (req.Status == "Resubmit_Invoice")
+                                        {
+                                            <span class="badge bg-warning">Resubmit Invoice</span>
+                                        }
+                                        else if (req.Status == "Awaiting_Payment")
+                                        {
+                                            <span class="badge bg-info text-dark">Finance Processing</span>
+                                        }
+                                        else if (req.Status == "Rejected")
+                                        {
+                                            <span class="badge bg-danger text-white border-0">Rejected</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@req.Status.Replace("_", " ")</span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4 text-nowrap">
+                                        @if (req.Status == "PO_Issued" && req.IsPoRequired)
+                                        {
+                                            var poDoc = req.Documents?.FirstOrDefault(d => d.DocType == "Purchase_Order"
+                                                                                        || d.DocType == "PO"
+                                                                                        || d.FileName.Contains("PO", StringComparison.OrdinalIgnoreCase));
+    
+                                            var poUrl = poDoc != null ? poDoc.BlobUrl : "#";
+
+                                            <a href="@poUrl" target="_blank" class="btn btn-sm btn-outline-dark me-1" title="View Purchase Order">
+                                                <i class="bi bi-file-earmark-pdf"></i> View
+                                            </a>
+                                            <form method="post" asp-page-handler="CloseRequest" asp-route-id="@req.Id" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-success fw-medium" onclick="return confirm('Confirm receipt of PO parameters and permanently close request #@req.Id?');">
+                                                    Close
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (req.Status == "Awaiting_Invoice")
+                                        {
+                                            <a asp-page="/Procurement/Manager/UploadInvoice" asp-route-id="@req.Id" class="btn btn-sm btn-primary shadow-sm">Upload Invoice</a>
+                                        }
+                                        else if (req.Status == "Rejected")
+                                        {
+                                            <form method="post" asp-page-handler="AcknowledgeRejected" asp-route-id="@req.Id" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary shadow-sm me-1">
+                                                    <i class="bi bi-check-circle me-1"></i>Acknowledge
+                                                </button>
+                                            </form>
+                                            <a asp-page="/Procurement/Manager/Details" asp-route-id="@req.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                        }
+                                        else
+                                        {
+                                            <a asp-page="/Procurement/Manager/Details" asp-route-id="@req.Id" class="btn btn-sm btn-outline-secondary">View</a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white border-top py-3 text-center">
+                    <a asp-page="/Procurement/Manager/MyRequests" class="btn btn-link text-dark fw-bold text-decoration-none small">
+                        VIEW ALL MY REQUESTS <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm mb-4 border-start border-primary border-4">
+                <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Recent Alerts</h6>
+                    @if (Model.Notifications != null && Model.Notifications.Any())
+                    {
+                        <form method="post" asp-page-handler="MarkAllRead">
+                            <button type="submit" class="btn btn-link p-0 text-decoration-none small text-muted" style="font-size:0.7rem">Acknowledge All</button>
+                        </form>
+                    }
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Notifications == null || !Model.Notifications.Any())
+                    {
+                        <div class="py-5 text-center">
+                            <i class="bi bi-bell-slash text-muted d-block mb-2 fs-4"></i>
+                            <p class="text-muted small mb-0 px-4">No new notifications. Everything is up to date!</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var note in Model.Notifications.Take(5))
+                            {
+                                <div class="list-group-item py-3 px-4 border-0 border-bottom">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="badge bg-primary rounded-pill" style="font-size:0.6rem">@note.Title</span>
+                                        <small class="text-muted" style="font-size:0.7rem">@(note.CreatedAt?.ToString("MMM dd") ?? "")</small>
+                                    </div>
+                                    <p class="mb-2 small text-dark fw-medium">@note.Message</p>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
