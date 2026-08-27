@@ -132,7 +132,7 @@
                                         </td>
                                         
                                         <td>
-                                            <span class="badge @(item.CostType == "BAU" ? "bg-info text-dark" : "bg-light text-dark border")">
+                                            <span class="badge @(item.CostType == "BAU" ? "bg-info text-dark" : item.CostType == "Health And Safety" ? "bg-warning text-dark" : "bg-light text-dark border")">
                                                 @item.CostType
                                             </span>
                                         </td>

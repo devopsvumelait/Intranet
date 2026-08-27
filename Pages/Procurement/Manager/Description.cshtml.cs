@@ -39,7 +39,7 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty]
         public string BlobUrl { get; set; } = string.Empty;
 
-        public List<string> DepartmentOptions { get; set; } = new() { "EUC", "Networks", "Cabling", "ADHOC" };
+        public List<string> DepartmentOptions { get; set; } = new() { "EUC", "Networks", "Cabling", "ADHOC", "Head Office" };
         public List<string> QuoteTypeOptions { get; set; } = new() { "Accomodation", "Courier", "Flights", "Fuel", "Health And Safety", "Legal Fees", "Medicals", "Networking Expense", "PPE", "S&T", "Security Clearance", "Small Assets", "Staff Welfare", "Team Builds", "Telephone And Internet", "Tool Hire", "Training", "Vehicle Expense", "Vehicle Hire" };
         public string SuggestedSupplierName { get; set; } = string.Empty;
 
@@ -120,7 +120,7 @@ namespace Intranet.Pages.Procurement.Manager
             if (string.IsNullOrEmpty(Input.SupplierName))
             {
                 Input.Description = description ?? string.Empty;
-                Input.CostType = (costType == "Operational" || costType == "Projects") ? "Projects" : "BAU";
+                Input.CostType = costType == "BAU" ? "BAU" : (costType == "Health And Safety" ? "Health And Safety" : "Projects");
                 Input.PaymentTiming = (timing == "Immediate" || timing == "Present" || timing == "Present Dated") ? "Immediate" : "Future Dated";
 
                 // Parse incoming future date parameters safely

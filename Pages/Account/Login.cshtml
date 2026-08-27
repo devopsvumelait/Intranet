@@ -123,5 +123,14 @@
         </div>
 
     </div>
+
+    <script>
+            // When the user submits the login form or successfully reaches the login page,
+            // mark that a fresh login is about to occur so the layout script doesn't loop them out.
+            document.querySelector("form")?.addEventListener("submit", function() {
+                sessionStorage.setItem("vumela_just_logged_in", "true");
+            });
+    </script>
+
 </body>
 </html>

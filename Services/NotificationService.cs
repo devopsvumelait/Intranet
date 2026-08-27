@@ -21,19 +21,21 @@ namespace Intranet.Services
         private readonly string _senderName;
         private readonly string _fromEmail;
         private readonly string _appPassword;
+        private readonly string _username;
 
         public NotificationService(AppDbContext context, IConfiguration config)
         {
             _context = context;
             _config = config;
 
-            _host = _config["GoogleSmtp:Host"] ?? "smtp.gmail.com";
-            _port = int.Parse(_config["GoogleSmtp:Port"] ?? "587");
-            _senderName = _config["GoogleSmtp:SenderName"] ?? "devopsvumela@gmail.com";
-            _fromEmail = _config["GoogleSmtp:FromEmail"] ?? "devopsvumela@gmail.com";
-           // _appPassword = _config["GoogleSmtp:AppPassword"] ?? "";
+            _host = _config["SmtpSettings:Host"] ?? "smtp.office365.com";
+            _port = int.Parse(_config["SmtpSettings:Port"] ?? "587");
+            _senderName = _config["SmtpSettings:SenderName"] ?? "Vumela Procurement";
+            _fromEmail = _config["SmtpSettings:FromEmail"] ?? "noreplyprocurement@vumelait.co.za";
+            _username = _config["SmtpSettings:Username"] ?? "devops@vumelait.co.za";
 
-            var rawPassword = _config["GoogleSmtp:AppPassword"] ?? _config["GoogleSmtp--AppPassword"] ?? "";
+            // Pulls from Key Vault seamlessly using standard colon or double-dash fallbacks, removing any stray spaces
+            var rawPassword = _config["SmtpSettings:AppPassword"] ?? _config["SmtpSettings--AppPassword"] ?? "";
             _appPassword = rawPassword.Replace(" ", "");
         }
 

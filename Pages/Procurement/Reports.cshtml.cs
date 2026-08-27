@@ -149,7 +149,7 @@ namespace Intranet.Pages.Procurement
                     .ToListAsync();
 
                 // 1. Define the master list
-                var allDepartments = new List<string> { "EUC", "Networks", "Cabling", "ADHOC" };
+                var allDepartments = new List<string> { "EUC", "Networks", "Cabling", "ADHOC", "Head Office" };
 
                 // 2. Determine which departments to display
                 var departmentsToDisplay = !string.IsNullOrEmpty(DepartmentFilter)

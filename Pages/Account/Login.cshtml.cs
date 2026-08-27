@@ -106,9 +106,15 @@ namespace Intranet.Pages.Account
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = false // Ensures the cookie dies when the browser/tab context drops
+            };
+
             await HttpContext.SignInAsync(
               CookieAuthenticationDefaults.AuthenticationScheme,
-              new ClaimsPrincipal(identity));
+              new ClaimsPrincipal(identity),
+              authProperties);
 
             // ================= SAFE ROLE REDIRECT =================
             if (roleNames.Contains("Admin"))
@@ -157,10 +163,17 @@ namespace Intranet.Pages.Account
             }
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = false // Deletes cookie when browser closes
+            };
+
 
             await HttpContext.SignInAsync(
               CookieAuthenticationDefaults.AuthenticationScheme,
-              new ClaimsPrincipal(identity));
+              new ClaimsPrincipal(identity), 
+              authProperties);
+
         }
     }
 }

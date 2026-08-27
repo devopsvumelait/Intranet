@@ -142,7 +142,7 @@ namespace Intranet.Pages.Procurement.Manager
                     selectedQuoteId = 0,
                     description = Description,
                     amount = finalPrice,
-                    costType = (CostType == "Operational" || CostType == "Projects") ? "Projects" : "BAU",
+                    costType = CostType == "BAU" ? "BAU" : (CostType == "Health And Safety" ? "Health And Safety" : "Projects"),
                     timing = (PaymentTiming == "Present" || PaymentTiming == "Immediate") ? "Immediate" : "Future Dated",
                     blobUrl = SelectedQuoteUrl,
                     futureDate = FutureDate?.ToString("yyyy-MM-dd"),
@@ -196,8 +196,13 @@ namespace Intranet.Pages.Procurement.Manager
                         {
                             string fileHash = GetFileSha256Hash(file);
 
-                            bool isDuplicate = await _context.Quotes.AnyAsync(q => q.FileHash == fileHash && q.Request.Status != "Cancelled"
-                                    && q.Request.Status != "Rejected_Acknowledged");
+                            bool isDuplicate = await _context.Quotes
+                            .Include(q => q.Request)
+                            .AnyAsync(q => q.FileHash == fileHash
+                            && q.Request.Status != "Cancelled"
+                            && q.Request.Status != "Rejected_Acknowledged"
+                            && (!IsEditMode || q.RequestId != Id.Value));
+
                             if (isDuplicate)
                             {
                                 Console.WriteLine($"[SECURITY] Rejected duplicate file upload exploit variant: {file.FileName}");

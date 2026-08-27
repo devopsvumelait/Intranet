@@ -8,6 +8,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
     <title>@ViewData["Title"] - Intranet</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -273,6 +278,27 @@
                 }
             };
     </script>
+
+
+        // If the user is authenticated, check if this specific tab has an active session flag
+    @if (User.Identity.IsAuthenticated)
+    {
+        <script>
+            // Check if we are currently on the login page or just came from it
+            const isJustLoggedIn = sessionStorage.getItem("vumela_just_logged_in");
+
+            if (isJustLoggedIn) {
+            // Clear the temporary login flag and establish the active tab state safely
+            sessionStorage.removeItem("vumela_just_logged_in");
+            window.name = "vumela_active_tab_instance";
+            } else if (!window.name || window.name !== "vumela_active_tab_instance") {
+            // This is a genuinely closed-and-reopened tab, NOT a fresh login
+            window.name = "vumela_active_tab_instance";
+            window.location.href = '/Account/Login?handler=Logout';
+            }
+        </script>
+    }
+    
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

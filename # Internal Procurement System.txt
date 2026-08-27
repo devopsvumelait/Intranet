@@ -2,7 +2,7 @@
 
 An enterprise-grade procurement and financial document processing web application built with C# .NET, leveraging AI-powered document parsing and secure cloud infrastructure.
 
-## 🛠️ Tech Stack & Architecture
+## Tech Stack & Architecture
 * **Backend:** C#, ASP.NET Core (Razor Pages), Entity Framework Core (SQL Server)
 * **AI & Intelligence:** Google Vertex AI (Gemini 2.5 Flash model) with structured JSON schema output validation for quote/invoice parsing.
 * **Cloud Infrastructure (Azure):** 
@@ -13,14 +13,14 @@ An enterprise-grade procurement and financial document processing web applicatio
 
 ---
 
-## 🚀 Key Features
+## Key Features
 * **Automated Document Processing:** Ingests procurement quotes and invoices, parsing them securely using Gemini 2.5 Flash.
 * **Database Persistence:** Uses EF Core with SQL Server to maintain structured transaction and audit data.
 * **Secure Enterprise Access:** Locked down behind corporate Microsoft Entra ID credentials with required MFA.
 
 ---
 
-## ⚙️ Configuration & Environment Variables
+## Configuration & Environment Variables
 The application expects specific secrets and connection strings to be available (managed securely via Azure Key Vault in production):
 * `ConnectionStrings:DefaultConnection` - SQL Server database connection string.
 * `AzureBlobStorage:ConnectionString` - Storage account connection string for document archives.
@@ -28,7 +28,32 @@ The application expects specific secrets and connection strings to be available 
 
 ---
 
-## 🔒 Deployment & Infrastructure Notes
+## Core System Flow
+1. **Authentication:** User navigates to the app URL and is intercepted by Azure App Service "Easy Auth" (Microsoft Entra ID), forcing a corporate login and MFA challenge for `@vumelait.co.za` users.
+2. **Document Ingestion:** The authenticated user uploads a procurement quote or invoice via the Razor Pages interface.
+3. **Blob Storage:** The raw document file is securely streamed and saved to Azure Blob Storage.
+4. **AI Parsing:** `GeminiAgentService` sends the document to Google Vertex AI using the Gemini 2.5 Flash model, enforcing a structured JSON schema output to extract line items, totals, and vendor details.
+5. **Persistence:** The parsed data and transaction details are saved to SQL Server via Entity Framework Core.
+
+---
+
+## API Limits, Quotas & Considerations
+* **Google Vertex AI (Gemini 2.5 Flash):** 
+  * Be mindful of rate limits (Requests Per Minute / Tokens Per Minute) depending on your Google Cloud tier if processing large batches of invoices simultaneously.
+  * The structured JSON output relies heavily on strict schema compliance; if a document is heavily distorted or low-resolution, check the application logs for parsing fallback errors.
+* **Azure Blob Storage:** Keep an eye on storage account transaction costs and lifecycle management if document archives grow significantly over time.
+**Daily CPU Quota:** Monitored against a strict **60-minute daily CPU time limit**. If continuous processing or traffic crosses this threshold, the application pauses until the quota resets at midnight UTC.
+* **Microsoft Entra ID Free Tier:** Relies on global Security Defaults for MFA. Remember that custom Conditional Access Policies are unavailable without a P1/P2 license upgrade.
+
+---
+
+## Troubleshooting & Quick Checks
+* **AI Parsing Fails / Returns Null:** Verify that `GoogleCloud:VertexAIKey` (or your service account JSON configuration) is properly bound in Azure Key Vault and that the service account has the *Vertex AI User* role in Google Cloud.
+* **Authentication Loops / 401 Errors:** Check that the Azure App Registration reply URLs match your active App Service domain (`*.azurewebsites.net` or your custom domain).
+* **Database Connection Issues:** Ensure the Azure SQL Server firewall allows Azure services to access the server, and verify the connection string format in Key Vault.
+
+
+## Deployment & Infrastructure Notes
 * **Authentication Setup:** Secured via Azure App Service "Easy Auth" tied to the `vumelait.co.za` Microsoft Entra ID tenant.
 * **Client Secret Expiration:** The underlying Azure App Registration secret expires every 24 months. 
   * *Maintenance:* If authentication fails unexpectedly down the road, generate a new client secret in Azure Portal (**Microsoft Entra ID** -> **App registrations** -> **Certificates & secrets**) and update it in the App Service authentication settings.
