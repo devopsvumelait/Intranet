@@ -24,6 +24,12 @@ namespace Intranet.Pages.Procurement.Manager
             _notify = notify;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         public string FullName { get; set; } = "";
         public int PendingCount { get; set; }
         public int RejectedCount { get; set; }
@@ -113,7 +119,7 @@ namespace Intranet.Pages.Procurement.Manager
                         ActionBy = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!),
                         ActionType = "UPDATE",
                         NewValues = "Manager acknowledged rejection. Workflow archived.",
-                        Timestamp = DateTime.Now
+                        Timestamp = GetSouthAfricanTime()
                     });
 
                     await _context.SaveChangesAsync();
@@ -145,7 +151,7 @@ namespace Intranet.Pages.Procurement.Manager
                 if (request.Status == "PO_Issued" && request.IsPoRequired)
                 {
                     request.Status = "Closed";
-                    request.UpdatedAt = DateTime.Now;
+                    request.UpdatedAt = GetSouthAfricanTime();
 
                     _context.AuditLogs.Add(new AuditLog
                     {
@@ -154,7 +160,7 @@ namespace Intranet.Pages.Procurement.Manager
                         ActionBy = userId,
                         ActionType = "UPDATE",
                         NewValues = "Manager reviewed issued Purchase Order. Request officially finalized and closed.",
-                        Timestamp = DateTime.Now
+                        Timestamp = GetSouthAfricanTime()
                     });
 
                     await _context.SaveChangesAsync();

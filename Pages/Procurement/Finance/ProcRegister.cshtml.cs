@@ -14,13 +14,18 @@ public class ProcRegister : PageModel
         
     }
 
+    private static DateTime GetSouthAfricanTime()
+    {
+        var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+        return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+    }
     public List<Request> MasterList { get; set; } = new();
 
     [BindProperty(SupportsGet = true)]
-    public int SelectedMonth { get; set; } = DateTime.Now.Month;
+    public int SelectedMonth { get; set; } = GetSouthAfricanTime().Month;
 
     [BindProperty(SupportsGet = true)]
-    public int SelectedYear { get; set; } = DateTime.Now.Year;
+    public int SelectedYear { get; set; } = GetSouthAfricanTime().Year;
 
     // Generates the filename based on selection for the download button
     public string TargetFileName =>

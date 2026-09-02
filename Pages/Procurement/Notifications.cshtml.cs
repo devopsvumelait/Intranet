@@ -35,6 +35,15 @@ namespace Intranet.Pages.Procurement
                 .OrderByDescending(n => n.CreatedAt)
                 .ToListAsync();
 
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            foreach (var n in Notifications)
+            {
+                if (n.CreatedAt.HasValue)
+                {
+                    n.CreatedAt = TimeZoneInfo.ConvertTimeFromUtc(n.CreatedAt.Value, saTimeZone);
+                }
+            }
+
             return Page();
         }
 

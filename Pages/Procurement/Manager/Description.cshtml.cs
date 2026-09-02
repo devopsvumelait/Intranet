@@ -1,4 +1,5 @@
 using Intranet.Models;
+using Intranet.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -7,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
 using System.Text.Json;
@@ -18,10 +20,12 @@ namespace Intranet.Pages.Procurement.Manager
     public class DescriptionModel : PageModel
     {
         private readonly AppDbContext _context;
+        private readonly NotificationService _notify;
 
-        public DescriptionModel(AppDbContext context)
+        public DescriptionModel(AppDbContext context, NotificationService notify)
         {
             _context = context;
+            _notify = notify;
         }
 
         [BindProperty]
@@ -39,8 +43,11 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty]
         public string BlobUrl { get; set; } = string.Empty;
 
-        public List<string> DepartmentOptions { get; set; } = new() { "EUC", "Networks", "Cabling", "ADHOC", "Head Office" };
-        public List<string> QuoteTypeOptions { get; set; } = new() { "Accomodation", "Courier", "Flights", "Fuel", "Health And Safety", "Legal Fees", "Medicals", "Networking Expense", "PPE", "S&T", "Security Clearance", "Small Assets", "Staff Welfare", "Team Builds", "Telephone And Internet", "Tool Hire", "Training", "Vehicle Expense", "Vehicle Hire" };
+        [BindProperty]
+        public string? SerializedSupportingDocs { get; set; }
+
+        public List<string> DepartmentOptions { get; set; } = new() { "EUC", "Networks", "Cabling", "ADHOC", "Head Office", "Interns" };
+        public List<string> QuoteTypeOptions { get; set; } = new() { "Accomodation", "Courier", "Flights", "Fuel", "Health And Safety", "Legal Fees", "Medicals", "Networking Expense", "PPE", "S&T", "Security Clearance", "Small Assets", "Staff Welfare", "Team Builds", "Telephone And Internet", "Tool Hire", "Training", "Vehicle Expense", "Vehicle Hire", "Office Expenses", "Materials" };
         public string SuggestedSupplierName { get; set; } = string.Empty;
 
         public class RequestInputModel
@@ -67,6 +74,13 @@ namespace Intranet.Pages.Procurement.Manager
             public string QuoteType { get; set; } = "None";
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            // "South Africa Standard Time" is the standard Windows and IANA time zone ID for SAST
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         public async Task<IActionResult> OnGetAsync(string? description, decimal? amount, string? costType, string? timing, string? blobUrl, string? futureDate, string? departmentType, string? customerName, string? quoteType)
         {
             if (amount.HasValue && amount.Value > 0)
@@ -84,10 +98,16 @@ namespace Intranet.Pages.Procurement.Manager
                 RequestType = TempData["SelectedRequestType"]?.ToString() ?? "Normal";
             }
 
+            if (string.IsNullOrEmpty(SerializedSupportingDocs))
+            {
+                SerializedSupportingDocs = TempData["SerializedSupportingDocs"]?.ToString() ?? string.Empty;
+            }
+
             RequestType = TempData["SelectedRequestType"]?.ToString() ?? "Normal";
             TempData["HiddenAmountValue"] = HiddenTotalAmount.ToString("F2", CultureInfo.InvariantCulture);
             TempData.Keep("HiddenAmountValue");
             TempData.Keep("SerializedDraftQuotes");
+            TempData.Keep("SerializedSupportingDocs");
             TempData.Keep("SelectedRequestType");
 
             // 1. Prioritize URL parameter, then TempData, then default to "None"
@@ -164,6 +184,7 @@ namespace Intranet.Pages.Procurement.Manager
         public async Task<IActionResult> OnPostSaveRequestAsync()
         {
             TempData.Keep("SerializedDraftQuotes");
+            TempData.Keep("SerializedSupportingDocs");
             TempData.Keep("HiddenAmountValue");
             TempData.Keep("SelectedRequestType");
             TempData.Keep("DepartmentType");
@@ -173,6 +194,11 @@ namespace Intranet.Pages.Procurement.Manager
             if (string.IsNullOrEmpty(RequestType))
             {
                 RequestType = TempData["SelectedRequestType"]?.ToString() ?? "Normal";
+            }
+
+            if (string.IsNullOrEmpty(SerializedSupportingDocs))
+            {
+                SerializedSupportingDocs = TempData["SerializedSupportingDocs"]?.ToString() ?? string.Empty;
             }
 
             TempData["SelectedRequestType"] = RequestType;
@@ -185,6 +211,36 @@ namespace Intranet.Pages.Procurement.Manager
 
             if (!ModelState.IsValid)
             {
+                if (HiddenTotalAmount == 0 && TempData["HiddenAmountValue"] is string amountStr &&
+                    decimal.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal savedAmt))
+                {
+                    HiddenTotalAmount = savedAmt;
+                }
+
+                // Repopulate suggested supplier name so the UI label doesn't go blank
+                if (SelectedQuoteId > 0)
+                {
+                    var q = await _context.Quotes.FindAsync(SelectedQuoteId);
+                    if (q != null) SuggestedSupplierName = q.SupplierName;
+                }
+                else if (TempData["SerializedDraftQuotes"] is string draftJson)
+                {
+                    try
+                    {
+                        var drafts = JsonSerializer.Deserialize<List<Quote>>(draftJson);
+                        var activeDraft = !string.IsNullOrEmpty(BlobUrl)
+                            ? drafts?.Find(qt => qt.BlobUrl == BlobUrl)
+                            : drafts?.FirstOrDefault();
+
+                        if (activeDraft != null)
+                        {
+                            SuggestedSupplierName = activeDraft.SupplierName;
+                            if (string.IsNullOrEmpty(BlobUrl)) BlobUrl = activeDraft.BlobUrl;
+                        }
+                    }
+                    catch { }
+                }
+
                 return Page();
             }
 
@@ -209,6 +265,19 @@ namespace Intranet.Pages.Procurement.Manager
                 var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (!Guid.TryParse(userIdString, out Guid userId)) return Forbid();
 
+                var recentThreshold = DateTime.UtcNow.AddSeconds(-5);
+                bool isDuplicate = await _context.Requests.AnyAsync(r =>
+                    r.RequesterId == userId &&
+                    r.TotalAmount == HiddenTotalAmount &&
+                    r.Description == Input.Description.Trim() &&
+                    r.CreatedAt >= recentThreshold);
+
+                if (isDuplicate)
+                {
+                    // Silently redirect or show a friendly message to stop duplicate entries
+                    return RedirectToPage("./MyRequests");
+                }
+
                 if (HiddenTotalAmount == 0 && TempData["HiddenAmountValue"] is string amountStr &&
                     decimal.TryParse(amountStr, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal savedAmt))
                 {
@@ -216,6 +285,8 @@ namespace Intranet.Pages.Procurement.Manager
                 }
 
                 string determinedStatus = "Pending_HOO";
+
+                var localNow = GetSouthAfricanTime();
 
                 var finalRequest = new Request
                 {
@@ -231,7 +302,7 @@ namespace Intranet.Pages.Procurement.Manager
                     CustomerName = Input.CustomerName,
                     QuoteType = Input.QuoteType,
                     Status = determinedStatus,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = localNow
                 };
 
                 _context.Requests.Add(finalRequest);
@@ -280,20 +351,64 @@ namespace Intranet.Pages.Procurement.Manager
                         targetQuote.RequestId = finalRequest.Id;
                         _context.Quotes.Update(targetQuote);
                     }
+
                 }
 
-                _context.Approvals.Add(new Approval
+                if (!string.IsNullOrEmpty(SerializedSupportingDocs))
+                {
+                    var suppElements = JsonSerializer.Deserialize<List<JsonElement>>(SerializedSupportingDocs);
+                    if (suppElements != null)
+                    {
+                        foreach (var elem in suppElements)
+                        {
+                            string url = elem.TryGetProperty("BlobUrl", out var urlProp) ? urlProp.GetString() ?? "" : "";
+                            if (!string.IsNullOrEmpty(url))
+                            {
+                                string extractedFileName = elem.TryGetProperty("FileName", out var nameProp) ? nameProp.GetString() ?? "" : "";
+                                if (string.IsNullOrEmpty(extractedFileName))
+                                {
+                                    extractedFileName = Path.GetFileName(url);
+                                }
+
+                                _context.Documents.Add(new Document
+                                {
+                                    RequestId = finalRequest.Id,
+                                    DocType = "Supporting_Document",
+                                    FileName = string.IsNullOrEmpty(extractedFileName) ? "Supporting_Document" : extractedFileName,
+                                    BlobUrl = url,
+                                    UploadedAt = localNow,
+                                    UploadedById = userId
+                                });
+                            }
+                        }
+                    }
+                }
+
+                        _context.Approvals.Add(new Approval
                 {
                     RequestId = finalRequest.Id,
                     Stage = determinedStatus,
-                    IsApproved = true,
-                    DecisionDate = DateTime.Now,
+                    IsApproved = false,
+                    DecisionDate = localNow,
                     Comments = $"Procurement managed requisition finalized for supplier: {Input.SupplierName}",
                     ApproverId = userId
                 });
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                try
+                {
+                    await _notify.NotifyApproversAsync(
+                        finalRequest.Id,
+                        "HOO",
+                        $"New procurement request #{finalRequest.Id} has been submitted and requires your review."
+                    );
+                }
+                catch (Exception notifyEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WARNING: Notification email failed to send: {notifyEx.Message}");
+                }
 
                 return RedirectToPage("./MyRequests");
             }

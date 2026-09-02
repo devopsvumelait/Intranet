@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
@@ -15,12 +16,17 @@ namespace Intranet.Pages.Procurement.Manager
     {
         private readonly AppDbContext _context;
         private readonly IAzureBlobService _blobService;
-        public DetailsModel(AppDbContext context, IAzureBlobService blobService) 
+        public DetailsModel(AppDbContext context, IAzureBlobService blobService)
         {
             _context = context;
             _blobService = blobService;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
         public Request RequestData { get; set; } = null!;
         public List<Approval> ApprovalSteps { get; set; } = new();
         public Document? ProofOfPayment { get; set; }
@@ -28,6 +34,8 @@ namespace Intranet.Pages.Procurement.Manager
 
         public Document? GetPO { get; set; }
         public List<Document> SupersededInvoices { get; set; } = new();
+
+        public List<Document> SupportingDocuments { get; set; } = new();
 
         [BindProperty(SupportsGet = true)]
         public string? ReturnUrl { get; set; }
@@ -72,6 +80,11 @@ namespace Intranet.Pages.Procurement.Manager
                     .OrderByDescending(d => d.UploadedAt)
                     .FirstOrDefaultAsync();
 
+                SupportingDocuments = await _context.Documents
+                    .Where(d => d.RequestId == id && d.DocType == "Supporting_Document")
+                    .OrderByDescending(d => d.UploadedAt)
+                    .ToListAsync();
+
                 if (RequestData.Quotes != null)
                 {
                     foreach (var quote in RequestData.Quotes)
@@ -90,7 +103,7 @@ namespace Intranet.Pages.Procurement.Manager
                     ProofOfPayment.BlobUrl = _blobService.GetReadSasUrl("pops", Path.GetFileName(popUri.LocalPath));
                 }
 
-                
+
                 if (GetInvoice != null && !string.IsNullOrEmpty(GetInvoice.BlobUrl))
                 {
                     var invUri = new Uri(GetInvoice.BlobUrl);
@@ -108,6 +121,12 @@ namespace Intranet.Pages.Procurement.Manager
                             supInv.BlobUrl = _blobService.GetReadSasUrl("invoices", Path.GetFileName(supUri.LocalPath));
                         }
                     }
+                }
+
+                if (SupportingDocuments != null)
+                {
+                    foreach (var supDoc in SupportingDocuments)
+                        ProcessDocSasAndName(supDoc, "supporting");
                 }
 
                 // Purchase Order URL
@@ -141,7 +160,7 @@ namespace Intranet.Pages.Procurement.Manager
                 return Forbid();
             }
 
-            
+
             request.Status = "PO_Payment_Queue";
 
             // Append an audit log trace tracking transaction
@@ -150,10 +169,10 @@ namespace Intranet.Pages.Procurement.Manager
                 RequestId = id,
                 Stage = "ManagerFinalSignOff",
                 IsApproved = true,
-                DecisionDate = DateTime.Now,
+                DecisionDate = GetSouthAfricanTime(),
                 Comments = "Manager confirmed delivery of services/goods. Request shifted to Finance Payment Queue.",
 
-                
+
                 ApproverId = currentUserId
             });
 
@@ -184,7 +203,7 @@ namespace Intranet.Pages.Procurement.Manager
                 RequestId = id,
                 Stage = "Manager_Closed",
                 IsApproved = true,
-                DecisionDate = DateTime.Now,
+                DecisionDate = GetSouthAfricanTime(),
                 Comments = "Manager acknowledged. Request archived.",
                 ApproverId = currentUserId
             });
@@ -217,13 +236,44 @@ namespace Intranet.Pages.Procurement.Manager
                 RequestId = id,
                 Stage = "Manager_Closed",
                 IsApproved = true,
-                DecisionDate = DateTime.Now,
+                DecisionDate = GetSouthAfricanTime(),
                 Comments = "Manager acknowledged. Request archived.",
                 ApproverId = currentUserId
             });
 
             await _context.SaveChangesAsync();
             return RedirectToPage("./Details", new { id });
+        }
+
+        private string GetCleanFileName(string storedFileName)
+        {
+            if (string.IsNullOrEmpty(storedFileName)) return "Supporting_Document";
+
+            // Matches standard 36-character GUIDs at the start of the string (with optional separator like '_' or '-')
+            var guidRegex = new System.Text.RegularExpressions.Regex(@"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[-_]?");
+
+            var cleaned = guidRegex.Replace(storedFileName, string.Empty);
+            return string.IsNullOrEmpty(cleaned) ? storedFileName : cleaned;
+        }
+
+        private void ProcessDocSasAndName(Document? doc, string containerName)
+        {
+            if (doc == null) return;
+
+            if (!string.IsNullOrEmpty(doc.BlobUrl))
+            {
+                try
+                {
+                    var uri = new Uri(doc.BlobUrl);
+                    doc.BlobUrl = _blobService.GetReadSasUrl(containerName, Path.GetFileName(uri.LocalPath));
+                }
+                catch
+                {
+                    // Fallback if URL parsing fails
+                }
+            }
+
+            doc.FileName = GetCleanFileName(doc.FileName);
         }
     }
 }

@@ -68,6 +68,11 @@ namespace Intranet.Pages.Procurement
         [BindProperty(SupportsGet = true)]
         public bool CanViewHighValueMDQueue { get; set; }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
         public async Task OnGetAsync(
         int? deptId,
         string? costType,
@@ -149,7 +154,7 @@ namespace Intranet.Pages.Procurement
                     .ToListAsync();
 
                 // 1. Define the master list
-                var allDepartments = new List<string> { "EUC", "Networks", "Cabling", "ADHOC", "Head Office" };
+                var allDepartments = new List<string> { "EUC", "Networks", "Cabling", "ADHOC", "Head Office", "Interns" };
 
                 // 2. Determine which departments to display
                 var departmentsToDisplay = !string.IsNullOrEmpty(DepartmentFilter)
@@ -402,8 +407,8 @@ namespace Intranet.Pages.Procurement
             {
                 if (!startDate.HasValue && !endDate.HasValue)
                 {
-                    startDate = DateTime.Today.AddMonths(-3);
-                    endDate = DateTime.Today;
+                    startDate = GetSouthAfricanTime().Date.AddMonths(-3);
+                    endDate = GetSouthAfricanTime().Date;
                 }
 
                 var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -478,7 +483,7 @@ namespace Intranet.Pages.Procurement
                         return File(
                             content,
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            $"ProcurementReport_{tab ?? "All"}_{DateTime.Now:yyyyMMdd}.xlsx");
+                            $"ProcurementReport_{tab ?? "All"}_{GetSouthAfricanTime():yyyyMMdd}.xlsx");
                     }
                 }
             }

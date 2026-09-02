@@ -58,6 +58,12 @@ namespace Intranet.Pages.Procurement
         // ================= CREATE ROLE =================
         [BindProperty] public string NewRoleName { get; set; } = string.Empty;
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         public async Task OnGetAsync()
         {
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -276,7 +282,7 @@ namespace Intranet.Pages.Procurement
             }
 
             request.Status = "Cancelled";
-            request.UpdatedAt = DateTime.Now;
+            request.UpdatedAt = GetSouthAfricanTime();
 
             await _context.SaveChangesAsync();
 

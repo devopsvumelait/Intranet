@@ -15,6 +15,12 @@ namespace Intranet.Services
             _logger = logger;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Payment Deadline monitoring worker context setup complete.");
@@ -31,7 +37,7 @@ namespace Intranet.Services
                         var itemsBehindSchedule = await context.Requests
                             .Where(r => r.PaymentTiming == "Future Dated"
                                      && r.FutureDate != null
-                                     && r.FutureDate < DateTime.Now
+                                     && r.FutureDate < GetSouthAfricanTime()
                                      && !r.IsOverdue
                                      && r.Status != "Completed"
                                      && r.Status != "Rejected")
@@ -44,7 +50,7 @@ namespace Intranet.Services
                             foreach (var req in itemsBehindSchedule)
                             {
                                 req.IsOverdue = true;
-                                req.UpdatedAt = DateTime.Now;
+                                req.UpdatedAt = GetSouthAfricanTime();
                             }
 
                             await context.SaveChangesAsync(stoppingToken);

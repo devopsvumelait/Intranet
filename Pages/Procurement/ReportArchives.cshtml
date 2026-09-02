@@ -33,7 +33,7 @@
             <label class="visually-hidden">Year</label>
             <select asp-for="SelectedYear" class="form-select">
                 <option value="">All Years</option>
-                @for (int i = DateTime.Now.Year; i >= DateTime.Now.Year - 5; i--)
+                @for (int i = Model.CurrentSaYear; i >= Model.CurrentSaYear - 5; i--)
                 {
                     <option value="@i">@i</option>
                 }

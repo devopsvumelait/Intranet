@@ -280,7 +280,7 @@
     </script>
 
 
-        // If the user is authenticated, check if this specific tab has an active session flag
+        
     @if (User.Identity.IsAuthenticated)
     {
         <script>
@@ -292,7 +292,7 @@
             sessionStorage.removeItem("vumela_just_logged_in");
             window.name = "vumela_active_tab_instance";
             } else if (!window.name || window.name !== "vumela_active_tab_instance") {
-            // This is a genuinely closed-and-reopened tab, NOT a fresh login
+            
             window.name = "vumela_active_tab_instance";
             window.location.href = '/Account/Login?handler=Logout';
             }

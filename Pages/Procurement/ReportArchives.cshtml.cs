@@ -19,6 +19,13 @@ namespace Intranet.Pages.Procurement
         [BindProperty(SupportsGet = true)]
         public int? SelectedYear { get; set; }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
+        public int CurrentSaYear => GetSouthAfricanTime().Year;
         public async Task OnGetAsync()
         {
             try { 

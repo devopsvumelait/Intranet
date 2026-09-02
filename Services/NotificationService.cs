@@ -23,6 +23,8 @@ namespace Intranet.Services
         private readonly string _appPassword;
         private readonly string _username;
 
+        private const string LoginUrl = "https://vumela-procurement-bufucdfhcnadfmdz.southafricanorth-01.azurewebsites.net/Account/Login";
+
         public NotificationService(AppDbContext context, IConfiguration config)
         {
             _context = context;
@@ -61,6 +63,8 @@ namespace Intranet.Services
         public async Task NotifyApproversAsync(int requestId, string targetRole, string message)
         {
             var usersInRole = await _context.Users
+                .Include(u => u.UserRoles)
+                .ThenInclude(ur => ur.Role)
                 .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == targetRole))
                 .ToListAsync();
             foreach (var user in usersInRole)
@@ -105,17 +109,20 @@ namespace Intranet.Services
                 message.To.Add(new MailboxAddress("", email));
                 message.Subject = subject;
 
+                string fullBodyWithLink = $"{body}<br><br>Login to Vumela Procurement: <a href='{LoginUrl}'>{LoginUrl}</a>";
+                string plainTextWithLink = $"{body}\n\nLogin to Vumela Procurement: {LoginUrl}";
+
                 var bodyBuilder = new BodyBuilder
                 {
-                    TextBody = body,
-                    HtmlBody = $"<p>{body}</p>"
+                    TextBody = plainTextWithLink,
+                    HtmlBody = $"<div style='font-family: Arial, sans-serif; color: #333; line-height: 1.5;'><p>{fullBodyWithLink}</p></div>"
                 };
                 message.Body = bodyBuilder.ToMessageBody();
 
                 using (var client = new MailKit.Net.Smtp.SmtpClient())
                 {
                     await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
-                    await client.AuthenticateAsync(_fromEmail, _appPassword);
+                    await client.AuthenticateAsync(_username, _appPassword);
                     await client.SendAsync(message);
                     await client.DisconnectAsync(true);
                 }
@@ -127,7 +134,7 @@ namespace Intranet.Services
                 Console.WriteLine($"GOOGLE SMTP ERROR: {ex.Message}");
                 Console.WriteLine($"STACK TRACE: {ex.StackTrace}");
                 Console.WriteLine($"========================================");
-                throw; 
+                
             }
         }
 
@@ -143,8 +150,8 @@ namespace Intranet.Services
 
                 var bodyBuilder = new BodyBuilder
                 {
-                    TextBody = "Please find your personalized monthly report attached.",
-                    HtmlBody = "<p>Please find your personalized monthly report attached.</p>"
+                    TextBody = $"Please find your personalized monthly report attached.\n\nLogin to Vumela Procurement: {LoginUrl}",
+                    HtmlBody = $"<p>Please find your personalized monthly report attached.</p><p>Login to Vumela Procurement: <a href='{LoginUrl}'>{LoginUrl}</a></p>"
                 };
 
                 bodyBuilder.Attachments.Add(fileName, excelBytes, ContentType.Parse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
@@ -153,7 +160,7 @@ namespace Intranet.Services
                 using (var client = new MailKit.Net.Smtp.SmtpClient())
                 {
                     await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
-                    await client.AuthenticateAsync(_fromEmail, _appPassword);
+                    await client.AuthenticateAsync(_username, _appPassword);
                     await client.SendAsync(message);
                     await client.DisconnectAsync(true);
                 }
@@ -161,7 +168,7 @@ namespace Intranet.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Google SMTP Report Error: {ex.Message}");
-                throw;
+                
             }
         }
 
@@ -177,8 +184,8 @@ namespace Intranet.Services
 
                 var bodyBuilder = new BodyBuilder
                 {
-                    TextBody = "Attached are your personalized report and the master procurement register.",
-                    HtmlBody = "<h3>Monthly Close</h3><p>Please find the report and the master paid-requests register attached.</p>"
+                    TextBody = $"Attached are your personalized report and the master procurement register.\n\nLogin to Vumela Procurement: {LoginUrl}",
+                    HtmlBody = $"<p>Please find the report and the master paid-requests register attached.</p><p>Login to Vumela Procurement: <a href='{LoginUrl}'>{LoginUrl}</a></p>"
                 };
 
                 var contentType = ContentType.Parse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -189,7 +196,7 @@ namespace Intranet.Services
                 using (var client = new MailKit.Net.Smtp.SmtpClient())
                 {
                     await client.ConnectAsync(_host, _port, SecureSocketOptions.StartTls);
-                    await client.AuthenticateAsync(_fromEmail, _appPassword);
+                    await client.AuthenticateAsync(_username, _appPassword);
                     await client.SendAsync(message);
                     await client.DisconnectAsync(true);
                 }
@@ -197,7 +204,7 @@ namespace Intranet.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Google SMTP Dual Error: {ex.Message}");
-                throw;
+                
             }
         }
     }

@@ -43,6 +43,11 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty(SupportsGet = true)]
         public DateTime? EndDate { get; set; }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
         public async Task OnGetAsync()
         {
             try
@@ -146,7 +151,7 @@ namespace Intranet.Pages.Procurement.Manager
                 {
                 // Change the status to a new state that indicates it has been acknowledged
                 request.Status = "Rejected_Acknowledged";
-                request.UpdatedAt = DateTime.Now;
+                request.UpdatedAt = GetSouthAfricanTime();
                 await _context.SaveChangesAsync();
                 }
 

@@ -114,6 +114,27 @@
                         }
                     </div>
 
+                    @if (Model.SupportingDocuments != null && Model.SupportingDocuments.Any())
+{
+    <h6 class="fw-bold mb-3">Supporting Documents</h6>
+    <div class="row g-2 mb-4">
+        @foreach (var doc in Model.SupportingDocuments)
+        {
+            <div class="col-sm-6">
+                <div class="border rounded p-3 d-flex align-items-center bg-light shadow-sm">
+                    <i class="bi bi-paperclip text-primary fs-3 me-3"></i>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="small fw-bold text-truncate" title="@doc.FileName">@doc.FileName</div>
+                        <div class="text-muted small" style="font-size:0.75rem;">Uploaded: @doc.UploadedAt?.ToString("yyyy-MM-dd")</div>
+                    </div>
+                    <a href="@doc.BlobUrl" target="_blank" class="btn btn-sm btn-outline-dark ms-2" title="View Document">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+}
                   
                     @if (Model.GetInvoice != null || Model.ProofOfPayment != null || Model.GetPO != null)
                     {

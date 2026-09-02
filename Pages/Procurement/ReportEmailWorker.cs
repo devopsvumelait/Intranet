@@ -13,11 +13,17 @@ namespace Intranet.Services
             _serviceProvider = serviceProvider;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var now = DateTime.Now;
+                var now = GetSouthAfricanTime();
 
                 if (!_testRunCompleted)
                 {
@@ -37,7 +43,7 @@ namespace Intranet.Services
 
         private async Task ProcessReports(CancellationToken stoppingToken)
         {
-            Console.WriteLine($"[WORKER] Automation started at: {DateTime.Now}");
+            Console.WriteLine($"[WORKER] Automation started at: {GetSouthAfricanTime()}");
             try
             {
                 using var scope = _serviceProvider.CreateScope();
@@ -50,7 +56,7 @@ namespace Intranet.Services
                 var users = await context.Users.Include(u => u.UserRoles).ThenInclude(ur => ur.Role).Where(u => u.IsActive).ToListAsync();
                 Console.WriteLine($"[WORKER] Found {users.Count} active users to process.");
 
-                string registerFileName = $"Procurement_Register_{DateTime.Now:MMMM_yyyy}.xlsx";
+                string registerFileName = $"Procurement_Register_{GetSouthAfricanTime():MMMM_yyyy}.xlsx";
                // string registerPath = Path.Combine(webHostEnvironment.WebRootPath, "registers", registerFileName);
                 byte[]? registerBytes = null;
 
@@ -82,8 +88,8 @@ namespace Intranet.Services
                     bool alreadyExists = await context.Documents.AnyAsync(d =>
                         d.UploadedById == user.Id &&
                         d.DocType == "Monthly_Report" &&
-                        d.UploadedAt.Value.Month == DateTime.Now.Month &&
-                        d.UploadedAt.Value.Year == DateTime.Now.Year);
+                        d.UploadedAt.Value.Month == GetSouthAfricanTime().Month &&
+                        d.UploadedAt.Value.Year == GetSouthAfricanTime().Year);
 
                     if (alreadyExists)
                     {
@@ -101,7 +107,7 @@ namespace Intranet.Services
 
                     // 3. Generate and Archive
                     var reportBytes = reportService.GenerateExcel(userReportData);
-                    var reportFileName = $"MonthlyReport_{user.Surname}_{DateTime.Now:yyyyMMdd_HHmm}.xlsx";
+                    var reportFileName = $"MonthlyReport_{user.Surname}_{GetSouthAfricanTime():yyyyMMdd_HHmm}.xlsx";
                     //await SaveAndArchive(context, webHostEnvironment, user, reportBytes, reportFileName);
                     string blobUrl;
                     using (var reportStream = new MemoryStream(reportBytes))
@@ -115,7 +121,7 @@ namespace Intranet.Services
                         BlobUrl = blobUrl, 
                         DocType = "Monthly_Report",
                         RequestId = null,
-                        UploadedAt = DateTime.Now,
+                        UploadedAt = GetSouthAfricanTime(),
                         UploadedById = user.Id
                     });
                     await context.SaveChangesAsync();
@@ -156,7 +162,7 @@ namespace Intranet.Services
                 BlobUrl = $"/Uploads/Reports/{fileName}",
                 DocType = "Monthly_Report",
                 RequestId = null,
-                UploadedAt = DateTime.Now,
+                UploadedAt = GetSouthAfricanTime(),
                 UploadedById = user.Id
             });
             await context.SaveChangesAsync();

@@ -16,6 +16,12 @@ namespace Intranet.Services
             _env = env;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         public async Task AddToMonthlyRegisterAsync(int requestId)
         {
             var request = await _context.Requests
@@ -32,7 +38,7 @@ namespace Intranet.Services
             string folder = Path.Combine(_env.WebRootPath, "registers");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-            string fileName = $"Procurement_Register_{DateTime.Now:MMMM_yyyy}.xlsx";
+            string fileName = $"Procurement_Register_{GetSouthAfricanTime():MMMM_yyyy}.xlsx";
             string filePath = Path.Combine(folder, fileName);
 
             // 2. Load or Create Workbook
@@ -61,7 +67,7 @@ namespace Intranet.Services
                 var invoiceDoc = request.Documents.FirstOrDefault(d => d.DocType == "Invoice");
                 var winningQuote = request.Quotes.FirstOrDefault();
 
-                worksheet.Cell(nextRow, 1).Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+                worksheet.Cell(nextRow, 1).Value = GetSouthAfricanTime().ToString("yyyy-MM-dd HH:mm");
                 worksheet.Cell(nextRow, 2).Value = request.Id;
                 worksheet.Cell(nextRow, 3).Value = $"{request.Requester.FirstName} {request.Requester.Surname}";
                 worksheet.Cell(nextRow, 4).Value = request.Requester.Department?.Name ?? "N/A";

@@ -22,6 +22,7 @@
                         <input type="hidden" asp-for="HiddenTotalAmount" />
                         <input type="hidden" asp-for="BlobUrl" />
                         <input type="hidden" asp-for="RequestType" />
+                        
                        
 
                         <div class="mb-4">
@@ -157,12 +158,20 @@
 
         const finalizeForm = document.getElementById('finalizeForm');
         if (finalizeForm) {
-            finalizeForm.addEventListener('submit', function () {
-                const saveBtn = document.getElementById('saveBtn');
-                if (saveBtn) {
-                    saveBtn.disabled = true;
-                    saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span> Committing Records...`;
-                }
+            let isSubmitting = false;
+            finalizeForm.addEventListener('submit', function (e) {
+        if (isSubmitting) {
+            e.preventDefault(); // Stop secondary submissions cold
+            return false;
+        }
+
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            isSubmitting = true;
+            saveBtn.disabled = true;
+            saveBtn.classList.add('disabled');
+            saveBtn.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Committing Records...`;
+        }
             });
         }
     </script>

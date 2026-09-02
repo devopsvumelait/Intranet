@@ -12,6 +12,11 @@ namespace Intranet.Services
         {
             _context = context;
         }
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
 
         public IQueryable<Request> BuildBaseQuery(Guid userId, bool isMD, bool isFinance, bool isHOS, bool isHOO)
         {
@@ -48,7 +53,9 @@ namespace Intranet.Services
                 var worksheet = workbook.Worksheets.Add("Procurement Report");
 
                 // Header Styling
-                var headers = new[] { "Request ID", "Description", "Cost Type", "Amount", "Status", "Date" };
+                var headers = new[] { "Request ID", "Requester", "Supplier / Vendor", "Description",
+            "Cost Type", "Amount", "Status", "Date Created",
+            "Quote Type", "Customer Name", "Department Type" };
                 for (int i = 0; i < headers.Length; i++)
                 {
                     var cell = worksheet.Cell(1, i + 1);
@@ -61,11 +68,17 @@ namespace Intranet.Services
                 foreach (var item in data)
                 {
                     worksheet.Cell(row, 1).Value = item.Id;
-                    worksheet.Cell(row, 2).Value = item.Description;
-                    worksheet.Cell(row, 3).Value = item.CostType;
-                    worksheet.Cell(row, 4).Value = item.TotalAmount;
-                    worksheet.Cell(row, 5).Value = item.Status;
-                    worksheet.Cell(row, 6).Value = item.CreatedAt?.ToString("yyyy-MM-dd");
+                    worksheet.Cell(row, 2).Value = $"{item.Requester?.FirstName} {item.Requester?.Surname}";
+                    worksheet.Cell(row, 3).Value = item.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "N/A";
+                    worksheet.Cell(row, 4).Value = item.Description;
+                    worksheet.Cell(row, 5).Value = item.CostType;
+                    worksheet.Cell(row, 6).Value = item.TotalAmount;
+                    worksheet.Cell(row, 6).Style.NumberFormat.Format = "R #,##0.00";
+                    worksheet.Cell(row, 7).Value = item.Status;
+                    worksheet.Cell(row, 8).Value = item.CreatedAt?.ToString("yyyy-MM-dd HH:mm");
+                    worksheet.Cell(row, 9).Value = item.QuoteType;
+                    worksheet.Cell(row, 10).Value = item.CustomerName;
+                    worksheet.Cell(row, 11).Value = item.DepartmentType;
                     row++;
                 }
 
@@ -120,7 +133,7 @@ namespace Intranet.Services
                 }
             }
 
-            var lastMonth = DateTime.Now.AddMonths(-1);
+            var lastMonth = GetSouthAfricanTime().AddMonths(-1);
             return await query
                 .Where(r => r.CreatedAt >= lastMonth)
                 .OrderByDescending(r => r.CreatedAt)

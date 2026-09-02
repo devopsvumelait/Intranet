@@ -30,10 +30,18 @@ namespace Intranet.Pages.Procurement.Approvals
         public int RejectedThisMonth { get; set; } 
         public decimal TotalSpendThisMonth { get; set; }
 
+        public string CurrentMonthYear { get; set; } = string.Empty;
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         public async Task OnGetAsync()
         {
             try
             {
+                CurrentMonthYear = GetSouthAfricanTime().ToString("MMMM yyyy");
                 var userId1 = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var currentUser = await _context.Users.FindAsync(userId1);
                 UserFullName = currentUser != null ? $"{currentUser.FirstName} {currentUser.Surname}" : "User";
@@ -63,8 +71,8 @@ namespace Intranet.Pages.Procurement.Approvals
 
                 // 4. Calculate Analytics
                 TotalPendingValue = PendingQueue.Sum(r => r.TotalAmount);
-
-                var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                var localNow = GetSouthAfricanTime();
+                var firstDayOfMonth = new DateTime(localNow.Year, localNow.Month, 1);
 
                 // Fetch all decisions (Approved AND Rejected) for the current month by this user
                 var monthlyDecisions = await _context.Approvals

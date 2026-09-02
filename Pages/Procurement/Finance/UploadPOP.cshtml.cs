@@ -9,6 +9,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Intranet.Pages.Procurement.Finance
@@ -29,6 +30,12 @@ namespace Intranet.Pages.Procurement.Finance
             _gemini = gemini;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         [BindProperty]
         [ValidateNever]
         public Request RequestData { get; set; } = null!;
@@ -36,6 +43,8 @@ namespace Intranet.Pages.Procurement.Finance
         [BindProperty] public IFormFile PopFile { get; set; } = null!;
         [BindProperty] public string ReferenceNumber { get; set; } = "";
         [BindProperty] public string PaymentMethod { get; set; } = "EFT";
+
+        public List<Document> SupportingDocuments { get; set; } = new();
 
         private async Task LoadRequestDataAsync(int id)
         {
@@ -62,6 +71,40 @@ namespace Intranet.Pages.Procurement.Finance
                     }
                 }
             }
+
+            SupportingDocuments = await _context.Documents
+                .Where(d => d.RequestId == id && d.DocType == "Supporting_Document")
+                .OrderByDescending(d => d.UploadedAt)
+                .ToListAsync();
+
+            if (SupportingDocuments != null)
+            {
+                foreach (var supDoc in SupportingDocuments)
+                {
+                    if (!string.IsNullOrEmpty(supDoc.BlobUrl))
+                    {
+                        try
+                        {
+                            if (Uri.IsWellFormedUriString(supDoc.BlobUrl, UriKind.Absolute))
+                            {
+                                var uri = new Uri(supDoc.BlobUrl);
+                                string fileName = Path.GetFileName(uri.LocalPath);
+                                supDoc.BlobUrl = _blobService.GetReadSasUrl("supporting", fileName);
+                            }
+                            else
+                            {
+                                supDoc.BlobUrl = _blobService.GetReadSasUrl("supporting", supDoc.BlobUrl);
+                            }
+                        }
+                        catch
+                        {
+                            supDoc.BlobUrl = "#";
+                        }
+                    }
+
+                    supDoc.FileName = GetCleanFileName(supDoc.FileName);
+                }
+            }
             return Page();
         }
 
@@ -73,6 +116,7 @@ namespace Intranet.Pages.Procurement.Finance
             if (PopFile == null || string.IsNullOrWhiteSpace(ReferenceNumber))
             {
                 ModelState.AddModelError("", "Please provide both the document file and the Reference Number.");
+                await ReloadSupportingDocsAsync(id);
                 return Page();
             }
 
@@ -94,6 +138,7 @@ namespace Intranet.Pages.Procurement.Finance
                 if (!aiResult.IsValid)
                 {
                     ModelState.AddModelError("", $"AI Verification Failed: {aiResult.ComparisonSummary}");
+                    await ReloadSupportingDocsAsync(id);
                     return Page();
                 }
 
@@ -117,7 +162,7 @@ namespace Intranet.Pages.Procurement.Finance
                     {
                         RequestId = req.Id,
                         PaidById = currentUserId,
-                        PaymentDate = DateTime.Now,
+                        PaymentDate = GetSouthAfricanTime(),
                         AmountPaid = req.TotalAmount,
                         PaymentMethod = PaymentMethod,
                         ReferenceNumber = ReferenceNumber,
@@ -133,7 +178,7 @@ namespace Intranet.Pages.Procurement.Finance
                     BlobUrl = blobUrl,
                     DocType = docPrefix,
                     UploadedById = currentUserId,
-                    UploadedAt = DateTime.Now
+                    UploadedAt = GetSouthAfricanTime()
                 });
 
                 // Status Routing Logic
@@ -150,7 +195,7 @@ namespace Intranet.Pages.Procurement.Finance
                     req.Status = "Awaiting_Invoice";
                 }
 
-                req.UpdatedAt = DateTime.Now;
+                req.UpdatedAt = GetSouthAfricanTime();
 
                 _context.AuditLogs.Add(new AuditLog
                 {
@@ -164,19 +209,70 @@ namespace Intranet.Pages.Procurement.Finance
                 await _context.SaveChangesAsync();
 
                 // Notification
-                string msg = isPurchaseOrder
-                    ? $"Purchase Order generated for Request #{req.Id}. Reference: {ReferenceNumber}."
-                    : $"Payment released for Request #{req.Id}. Reference: {ReferenceNumber}.";
+                try
+                {
+                    string msg = isPurchaseOrder
+                        ? $"Purchase Order generated for Request #{req.Id}. Reference: {ReferenceNumber}."
+                        : $"Payment released for Request #{req.Id}. Reference: {ReferenceNumber}.";
 
-                await _notify.NotifyUserAsync(req.RequesterId, msg, req.Id, isPurchaseOrder ? "PO Uploaded" : "POP Uploaded");
+                    await _notify.NotifyUserAsync(req.RequesterId, msg, req.Id, isPurchaseOrder ? "PO Uploaded" : "POP Uploaded");
+                }
+                catch (Exception notifyEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WARNING: Notification email failed to send: {notifyEx.Message}");
+                }
 
                 return RedirectToPage("./PaymentQueue");
             }
             catch (Exception)
             {
                 ModelState.AddModelError("", "A system error occurred while processing the AI verification.");
+                await ReloadSupportingDocsAsync(id);
                 return Page();
             }
+        }
+        private async Task ReloadSupportingDocsAsync(int id)
+        {
+            SupportingDocuments = await _context.Documents
+                .Where(d => d.RequestId == id && d.DocType == "Supporting_Document")
+                .OrderByDescending(d => d.UploadedAt)
+                .ToListAsync();
+
+            if (SupportingDocuments != null)
+            {
+                foreach (var supDoc in SupportingDocuments)
+                {
+                    if (!string.IsNullOrEmpty(supDoc.BlobUrl))
+                    {
+                        try
+                        {
+                            if (Uri.IsWellFormedUriString(supDoc.BlobUrl, UriKind.Absolute))
+                            {
+                                var uri = new Uri(supDoc.BlobUrl);
+                                string fileName = Path.GetFileName(uri.LocalPath);
+                                supDoc.BlobUrl = _blobService.GetReadSasUrl("supporting", fileName);
+                            }
+                            else
+                            {
+                                supDoc.BlobUrl = _blobService.GetReadSasUrl("supporting", supDoc.BlobUrl);
+                            }
+                        }
+                        catch
+                        {
+                            supDoc.BlobUrl = "#";
+                        }
+                    }
+                    supDoc.FileName = GetCleanFileName(supDoc.FileName);
+                }
+            }
+        }
+
+        private string GetCleanFileName(string storedFileName)
+        {
+            if (string.IsNullOrEmpty(storedFileName)) return "Supporting_Document";
+            var guidRegex = new Regex(@"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}[-_]?");
+            var cleaned = guidRegex.Replace(storedFileName, string.Empty);
+            return string.IsNullOrEmpty(cleaned) ? storedFileName : cleaned;
         }
     }
 }

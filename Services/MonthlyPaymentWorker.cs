@@ -25,13 +25,19 @@ namespace Intranet.Services
             _logger = logger;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("Automated Monthly Payment Worker Service is running.");
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                var now = DateTime.Now;
+                var now = GetSouthAfricanTime();
 
                 // Condition: It must be the 1st day of the month, and we shouldn't have executed yet this month
                 if (now.Day == 1 && _lastExecutedMonth != now.Month)
@@ -78,7 +84,7 @@ namespace Intranet.Services
             foreach (var req in pendingPayments)
             {
                 req.Status = "Closed";
-                req.UpdatedAt = DateTime.Now;
+                req.UpdatedAt = GetSouthAfricanTime();
                 closedCount++;
 
                 // Inject a system trace into your transaction audit trail for tracking

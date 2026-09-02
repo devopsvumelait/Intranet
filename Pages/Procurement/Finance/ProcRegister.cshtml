@@ -30,7 +30,10 @@
                 <div class="col-md-4">
                     <label class="form-label small fw-bold">Year</label>
                     <select asp-for="SelectedYear" class="form-select">
-                        @for (int i = DateTime.Now.Year - 2; i <= DateTime.Now.Year; i++)
+                        @{
+                            var currentSaYear = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time")).Year;
+                        }
+                        @for (int i = currentSaYear - 2; i <= currentSaYear; i++)
                         {
                             <option value="@i">@i</option>
                         }

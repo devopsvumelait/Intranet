@@ -43,10 +43,15 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty] public DateTime? FutureDate { get; set; }
 
         [BindProperty] public List<IFormFile> QuoteFiles { get; set; } = new();
+
+        [BindProperty] public List<IFormFile> SupportingFiles { get; set; } = new();
         [BindProperty] public int FormStep { get; set; } = 1;
         [BindProperty] public string SerializedQuotes { get; set; } = "";
+        [BindProperty] public string SerializedSupportingDocs { get; set; } = "";
         [BindProperty] public string SelectedQuoteUrl { get; set; } = "";
         [BindProperty] public string RemovedQuoteIds { get; set; } = "";
+
+        [BindProperty] public string RemovedSupportingDocIds { get; set; } = "";
 
         [BindProperty]
         public List<IFormFile> QuoteUploads { get; set; } = new List<IFormFile>();
@@ -60,6 +65,11 @@ namespace Intranet.Pages.Procurement.Manager
 
         public List<Quote> ExtractedQuotes { get; set; } = new();
 
+        private DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
         public bool IsEditMode => Id.HasValue && Id.Value > 0;
 
         public async Task<IActionResult> OnGetAsync(int? id)
@@ -98,6 +108,16 @@ namespace Intranet.Pages.Procurement.Manager
                 SerializedQuotes = JsonSerializer.Serialize(ExtractedQuotes);
                 SelectedQuoteUrl = request.Quotes.FirstOrDefault(q => q.IsSelected)?.BlobUrl ?? "";
 
+                var existingSuppDocs = await _context.Documents
+                    .Where(d => d.RequestId == id.Value && d.DocType == "Supporting_Document")
+                    .ToListAsync();
+
+                SerializedSupportingDocs = JsonSerializer.Serialize(existingSuppDocs.Select(d => new {
+                    d.Id,
+                    FileName = string.IsNullOrEmpty(d.FileName) ? Path.GetFileName(d.BlobUrl) : d.FileName,
+                    d.BlobUrl
+                }));
+
                 FormStep = 1;
             }
 
@@ -112,6 +132,7 @@ namespace Intranet.Pages.Procurement.Manager
             }
 
             ModelState.Remove(nameof(QuoteFiles));
+            ModelState.Remove(nameof(SupportingFiles));
 
             // STEP 2 RE-ROUTING PIPELINE
             if (FormStep == 2)
@@ -130,6 +151,7 @@ namespace Intranet.Pages.Procurement.Manager
                 decimal finalPrice = selectedQuote?.Price ?? 0.00m;
 
                 TempData["SerializedDraftQuotes"] = SerializedQuotes;
+                TempData["SerializedSupportingDocs"] = SerializedSupportingDocs;
                 TempData["HiddenAmountValue"] = finalPrice.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                 TempData["SelectedRequestType"] = RequestType;
                 TempData["DepartmentType"] = DepartmentType;
@@ -158,6 +180,10 @@ namespace Intranet.Pages.Procurement.Manager
                 ? QuoteFiles
                 : Request.Form.Files.GetFiles("QuoteFiles").ToList();
 
+            var uploadedSuppFiles = (SupportingFiles != null && SupportingFiles.Count > 0)
+                ? SupportingFiles
+                : Request.Form.Files.GetFiles("SupportingFiles").ToList();
+
             var removedIds = !string.IsNullOrEmpty(RemovedQuoteIds)
                 ? RemovedQuoteIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList()
                 : new List<int>();
@@ -166,6 +192,57 @@ namespace Intranet.Pages.Procurement.Manager
 
             try
             {
+                List<Document> currentSuppList = new();
+                if (!string.IsNullOrEmpty(SerializedSupportingDocs))
+                {
+                    try
+                    {
+                        var parsed = JsonSerializer.Deserialize<List<JsonElement>>(SerializedSupportingDocs);
+                        if (parsed != null)
+                        {
+                            foreach (var elem in parsed)
+                            {
+                                int docId = elem.TryGetProperty("Id", out var idProp) ? idProp.GetInt32() : 0;
+                                string url = elem.TryGetProperty("BlobUrl", out var urlProp) ? urlProp.GetString() ?? "" : "";
+                                string name = elem.TryGetProperty("FileName", out var nameProp) ? nameProp.GetString() ?? "" : Path.GetFileName(url);
+                                currentSuppList.Add(new Document { Id = docId, FileName = name, BlobUrl = url, DocType = "Supporting_Document" });
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (uploadedSuppFiles != null && uploadedSuppFiles.Count > 0)
+                {
+                    foreach (var suppFile in uploadedSuppFiles)
+                    {
+                        string safeOriginalName = Path.GetFileName(suppFile.FileName);
+                        string blobFileName = $"{Guid.NewGuid()}{Path.GetExtension(suppFile.FileName)}";
+                        string suppBlobUrl;
+
+                        using (var stream = suppFile.OpenReadStream())
+                        {
+                            suppBlobUrl = await _blobService.UploadFileAsync("supporting", blobFileName, stream, suppFile.ContentType);
+                        }
+
+                        currentSuppList.Add(new Document
+                        {
+                            Id = 0,
+                            FileName = safeOriginalName,
+                            BlobUrl = suppBlobUrl,
+                            DocType = "Supporting_Document",
+                            UploadedAt = GetSouthAfricanTime()
+                        });
+                    }
+                }
+
+                SerializedSupportingDocs = JsonSerializer.Serialize(currentSuppList.Select(d => new {
+                    d.Id,
+                    FileName = string.IsNullOrEmpty(d.FileName) ? Path.GetFileName(d.BlobUrl) : d.FileName,
+                    d.BlobUrl
+                }));
+
+
                 if (uploadedFiles != null)
                     foreach (var f in uploadedFiles)
                         Console.WriteLine($"[DEBUG]    -> File: {f.FileName}, Size: {f.Length}");
@@ -294,6 +371,10 @@ namespace Intranet.Pages.Procurement.Manager
                     removedIds = RemovedQuoteIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList();
                 }
 
+                var removedSuppIds = !string.IsNullOrEmpty(RemovedSupportingDocIds)
+                    ? RemovedSupportingDocIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(int.Parse).ToList()
+                    : new List<int>();
+
                 request.Description = Description;
                 request.CostType = CostType;
                 request.DepartmentType = DepartmentType;
@@ -304,12 +385,18 @@ namespace Intranet.Pages.Procurement.Manager
                 request.IsPoRequired = (RequestType == "PO");
 
                 request.FutureDate = (PaymentTiming == "Future") ? FutureDate : null;
-                request.UpdatedAt = DateTime.Now;
+                request.UpdatedAt = GetSouthAfricanTime();
 
                 if (removedIds.Count > 0)
                 {
                     var targets = request.Quotes.Where(q => removedIds.Contains(q.Id)).ToList();
                     _context.Quotes.RemoveRange(targets);
+                }
+
+                if (removedSuppIds.Count > 0)
+                {
+                    var suppTargets = await _context.Documents.Where(d => removedSuppIds.Contains(d.Id)).ToListAsync();
+                    _context.Documents.RemoveRange(suppTargets);
                 }
 
                 var selected = ExtractedQuotes.FirstOrDefault(q => q.BlobUrl == SelectedQuoteUrl);
@@ -334,6 +421,41 @@ namespace Intranet.Pages.Procurement.Manager
                             match.IsSelected = (match.BlobUrl == SelectedQuoteUrl);
                         }
                     }
+                }
+
+                if (!string.IsNullOrEmpty(SerializedSupportingDocs))
+                {
+                    try
+                    {
+                        var suppElements = JsonSerializer.Deserialize<List<JsonElement>>(SerializedSupportingDocs);
+                        if (suppElements != null)
+                        {
+                            foreach (var elem in suppElements)
+                            {
+                                int docId = elem.TryGetProperty("Id", out var idProp) ? idProp.GetInt32() : 0;
+                                string url = elem.TryGetProperty("BlobUrl", out var urlProp) ? urlProp.GetString() ?? "" : "";
+
+                                if (docId == 0 && !string.IsNullOrEmpty(url))
+                                {
+                                    string extractedFileName = elem.TryGetProperty("FileName", out var nameProp) ? nameProp.GetString() ?? "" : "";
+                                    if (string.IsNullOrEmpty(extractedFileName))
+                                    {
+                                        extractedFileName = Path.GetFileName(url);
+                                    }
+
+                                    _context.Documents.Add(new Document
+                                    {
+                                        RequestId = request.Id,
+                                        DocType = "Supporting_Document",
+                                        FileName = string.IsNullOrEmpty(extractedFileName) ? "Supporting_Document" : extractedFileName,
+                                        BlobUrl = url,
+                                        UploadedAt = GetSouthAfricanTime()
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    catch { }
                 }
 
                 await _context.SaveChangesAsync();

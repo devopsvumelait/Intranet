@@ -45,6 +45,7 @@
                             <input type="hidden" name="FormStep" value="1" />
                             <input type="hidden" name="Id" value="@Model.Id" />
                             <input type="hidden" name="SerializedQuotes" id="serializedQuotesInput" value="@Model.SerializedQuotes" />
+                            <input type="hidden" name="SerializedSupportingDocs" id="serializedSupportingDocsInput" value="@Model.SerializedSupportingDocs" />
                             <input type="hidden" name="SelectedQuoteUrl" value="@Model.SelectedQuoteUrl" />
                             <input type="hidden" name="RemovedQuoteIds" id="removedQuoteIdsInput" value="@Model.RemovedQuoteIds" />
                             
@@ -62,6 +63,7 @@
                                         <option value="Cabling">Cabling</option>
                                         <option value="ADHOC">ADHOC</option>
                                         <option value="Head Office">Head Office</option>
+                                        <option value="Interns">Interns</option>    
                                     </select>
                                 </div>
                                 <div class="col-md-6">
@@ -97,7 +99,9 @@
                                         <option value="Tool Hire">Tool Hire</option>
                                         <option value="Training">Training</option>
                                         <option value="Vehicle  Expense">Vehicle Expense</option>
-                                        <option value="Vehicle Hire">Vehicle Hire</option>                                      
+                                        <option value="Vehicle Hire">Vehicle Hire</option>
+                                        <option value="Office Expenses">Office Expenses </option>
+                                        <option value="Materials">Materials</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
@@ -125,14 +129,7 @@
                                 </select>
                             </div>
 
-                          @*  <div class="mb-4 p-3 bg-light rounded border border-start border-4 border-primary">
-                                <div class="form-check form-switch mb-0">
-                                    <input class="form-check-input" type="checkbox" role="switch" asp-for="IsPoRequired" id="poToggleSwitch">
-                                    <label class="form-check-label fw-bold text-dark ps-2" for="poToggleSwitch">
-                                        Is a Corporate Purchase Order (PO) required?
-                                    </label>
-                                </div>
-                            </div> *@
+                         
                             
                             <div class="mb-4">
                             <label asp-for="Description" class="form-label fw-bold">Motivation</label>
@@ -151,6 +148,16 @@
                                 </div>
                                 <div id="fileLimitWarning" class="text-danger small mb-2" style="display:none;"><i class="bi bi-exclamation-triangle"></i> Maximum of 3 quotes allowed.</div>
                                 <div id="fileList" class="mb-3"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Supporting Documents (Optional)</label>
+                                <div class="input-group mb-2">
+                                    <input type="file" id="supportingFilePicker" name="SupportingFiles" class="form-control bg-light border-0" multiple accept=".pdf,.jpg,.png,.docx,.xlsx" />
+                                </div>
+                                <div id="supportingFileList" class="mb-3"></div>
+                                
+                                <input type="hidden" name="RemovedSupportingDocIds" id="removedSupportingDocIdsInput" />
                             </div>
 
                             <div class="d-flex justify-content-between align-items-center border-top pt-4">
@@ -185,6 +192,10 @@
                             <input type="hidden" name="IsPoRequired" value="@(Model.IsPoRequired ? "true" : "false")" />
                             <input type="hidden" name="Id" value="@Model.Id" />
                             <input type="hidden" name="SerializedQuotes" id="serializedQuotesInput" value="@Model.SerializedQuotes" />
+                            <input type="hidden"
+                                   name="SerializedSupportingDocs"
+                                   id="serializedSupportingDocsStep2"
+                                   value="@Model.SerializedSupportingDocs" />
                             <input type="hidden" name="RemovedQuoteIds" value="@Model.RemovedQuoteIds" />
 
                             @if (Model.PaymentTiming == "Future" && Model.FutureDate.HasValue)
@@ -242,7 +253,13 @@
         let filesArray = [];
         let dbFilesArray = [];
         let removedDbIds = [];
-        
+                let supportingFilesArray = [];
+        let dbSupportingFilesArray = [];
+        let removedSupportingDbIds = [];
+        const supportingFilePicker = document.getElementById('supportingFilePicker');
+        const supportingFileListContainer = document.getElementById('supportingFileList');
+        const removedSupportingInput = document.getElementById('removedSupportingDocIdsInput');
+        const serializedSupportingInput = document.getElementById('serializedSupportingDocsInput');
         const maxFiles = 3;
         const filePicker = document.getElementById('filePicker');
         const fileListContainer = document.getElementById('fileList');
@@ -288,6 +305,20 @@
                 } catch(e) { console.error("Error parsing JSON collection arrays", e); }
                 renderFiles();
             }
+
+                    if (isEditMode && serializedSupportingInput && serializedSupportingInput.value) {
+            try {
+                const existingSup = JSON.parse(serializedSupportingInput.value);
+                existingSup.forEach(item => {
+                    dbSupportingFilesArray.push({
+                        id: item.Id,
+                        name: item.FileName + " (Stored Supporting Doc)",
+                        url: item.BlobUrl
+                    });
+                });
+            } catch(e) { console.error("Error parsing supporting docs JSON", e); }
+            renderSupportingFiles();
+        }
 
             const radioSelectors = document.querySelectorAll('.quote-radio-selector');
             radioSelectors.forEach(radio => {
@@ -338,6 +369,73 @@
                 }
                 syncFileInput();
                 renderFiles();
+            });
+        }
+
+                if(supportingFilePicker) {
+            supportingFilePicker.addEventListener('change', function (e) {
+                const newFiles = Array.from(e.target.files);
+                newFiles.forEach(f => supportingFilesArray.push(f));
+                syncSupportingFileInput();
+                renderSupportingFiles();
+            });
+        }
+
+        function updateSerializedSupportingInput() {
+            const currentState = dbSupportingFilesArray.map(f => ({
+                Id: f.id,
+                FileName: f.name.replace(" (Stored Supporting Doc)", ""),
+                BlobUrl: f.url
+            }));
+            if (serializedSupportingInput) {
+                serializedSupportingInput.value = JSON.stringify(currentState);
+            }
+        }
+
+        function removeLocalSupportingFile(index) {
+            supportingFilesArray.splice(index, 1);
+            syncSupportingFileInput();
+            updateSerializedSupportingInput();
+            renderSupportingFiles();
+        }
+
+        function removeDbSupportingFile(id, index) {
+            dbSupportingFilesArray.splice(index, 1);
+            removedSupportingDbIds.push(id);
+            if(removedSupportingInput) removedSupportingInput.value = removedSupportingDbIds.join(',');
+            updateSerializedSupportingInput();
+            renderSupportingFiles();
+        }
+
+        function syncSupportingFileInput() {
+            if (!supportingFilePicker) return;
+            const dataTransfer = new DataTransfer();
+            supportingFilesArray.forEach(file => dataTransfer.items.add(file));
+            supportingFilePicker.files = dataTransfer.files;
+        }
+
+        function renderSupportingFiles() {
+            if (!supportingFileListContainer) return;
+            supportingFileListContainer.innerHTML = "";
+
+            dbSupportingFilesArray.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = "d-flex justify-content-between align-items-center p-2 border rounded mb-2 bg-light text-dark shadow-sm border-start border-4 border-info";
+                div.innerHTML = `
+                    <span class="small text-truncate"><i class="bi bi-file-earmark-check-fill text-info me-2"></i>${file.name}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeDbSupportingFile(${file.id}, ${index})"><i class="bi bi-trash"></i></button>
+                `;
+                supportingFileListContainer.appendChild(div);
+            });
+
+            supportingFilesArray.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = "d-flex justify-content-between align-items-center p-2 border rounded mb-2 bg-white shadow-sm";
+                div.innerHTML = `
+                    <span class="small text-truncate"><i class="bi bi-file-earmark-plus text-secondary me-2"></i>${file.name}</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger border-0" onclick="removeLocalSupportingFile(${index})"><i class="bi bi-trash"></i></button>
+                `;
+                supportingFileListContainer.appendChild(div);
             });
         }
 
@@ -457,6 +555,10 @@
                 }
                 updateSerializedInput();
 
+                updateSerializedSupportingInput();
+
+                console.log("Serialized Supporting Docs Value:", document.getElementById('serializedSupportingDocsInput')?.value);
+
                 // Construct programmatic multipart payload
                 const formData = new FormData(formEl);
                 
@@ -465,6 +567,11 @@
                 filesArray.forEach(file => {
                     formData.append('QuoteFiles', file);
                 });
+
+                        formData.delete('SupportingFiles');
+        supportingFilesArray.forEach(file => {
+            formData.append('SupportingFiles', file);
+        });
 
                 fetch(window.location.href, {
                     method: 'POST',

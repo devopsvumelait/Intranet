@@ -16,6 +16,8 @@ namespace Intranet.Pages.Procurement.Finance
         private readonly RegisterService _registerService;
         private readonly IAzureBlobService _blobService;
 
+
+
         public VerifyClosureModel(AppDbContext context, NotificationService notify, RegisterService registerService, IAzureBlobService blobService)
         {
             _context = context;
@@ -93,10 +95,12 @@ namespace Intranet.Pages.Procurement.Finance
 
         public async Task<IActionResult> OnPostCloseRequestAsync(int id)
         {
-            try
-            {
                 var req = await _context.Requests.FindAsync(id);
                 if (req == null) return NotFound();
+
+            try
+            {
+
 
                 req.Status = "Closed";
                 await _registerService.AddToMonthlyRegisterAsync(id);
@@ -111,22 +115,34 @@ namespace Intranet.Pages.Procurement.Finance
                 });
 
                 await _context.SaveChangesAsync();
-                await _notify.NotifyUserAsync(req.RequesterId, $"Request #{id} closed and registered.", id, "Request Closed");
+                try
+                {
+                    await _notify.NotifyUserAsync(req.RequesterId, $"Request #{id} closed and registered.", id, "Request Closed");
+                }
+                catch (Exception notifyEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WARNING: Notification email failed to send: {notifyEx.Message}");
+                }
+
+                return RedirectToPage("./PaymentQueue");
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "An error occured");
+                ModelState.AddModelError("", "An error occurred while closing the request.");
+                return Page();
             }
 
-            return RedirectToPage("./PaymentQueue");
+            
         }
 
         public async Task<IActionResult> OnPostRejectInvoiceAsync(int id, string reason)
         {
+            var req = await _context.Requests.FindAsync(id);
+            if (req == null) return NotFound();
+
             try
             {
-                var req = await _context.Requests.FindAsync(id);
-                if (req == null) return NotFound();
+
 
                 req.Status = "Resubmit_Invoice";
                 req.RejectionReason = reason;
@@ -141,14 +157,26 @@ namespace Intranet.Pages.Procurement.Finance
                 });
 
                 await _context.SaveChangesAsync();
-                await _notify.NotifyUserAsync(req.RequesterId, $"Invoice Rejected: {reason}", id, "Action Required");
+                try
+                {
+                    await _notify.NotifyUserAsync(req.RequesterId, $"Invoice Rejected: {reason}", id, "Action Required");
+                }
+                catch (Exception notifyEx)
+                {
+                    System.Diagnostics.Debug.WriteLine($"WARNING: Notification email failed to send: {notifyEx.Message}");
+                }
+                
+                return RedirectToPage("./PaymentQueue");
+
+
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "An error occured");
+                ModelState.AddModelError("", "An error occurred while rejecting the invoice.");
+                return Page();
             }
 
-            return RedirectToPage("./PaymentQueue");
+            
         }
     }
 }

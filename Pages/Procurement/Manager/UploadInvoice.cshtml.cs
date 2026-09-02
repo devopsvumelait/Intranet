@@ -30,6 +30,11 @@ namespace Intranet.Pages.Procurement.Manager
             _ai = ai;
         }
 
+        private static DateTime GetSouthAfricanTime()
+        {
+            var saTimeZone = TimeZoneInfo.FindSystemTimeZoneById("South Africa Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, saTimeZone);
+        }
         [BindProperty] public Request RequestData { get; set; } = null!;
         [BindProperty] public IFormFile InvoiceFile { get; set; } = null!;
         [BindProperty] public IFormFile? PopFile { get; set; }
@@ -121,7 +126,7 @@ namespace Intranet.Pages.Procurement.Manager
                     BlobUrl = invoiceUrl,
                     DocType = "Invoice",
                     UploadedById = Guid.Parse(userIdString!),
-                    UploadedAt = DateTime.Now
+                    UploadedAt = GetSouthAfricanTime()
                 });
 
                 // --- ADAPTIVE STATUS ROUTING ---
@@ -134,17 +139,24 @@ namespace Intranet.Pages.Procurement.Manager
                     req.Status = "Awaiting_Verification";
                 }
 
-                req.UpdatedAt = DateTime.Now;
+                req.UpdatedAt = GetSouthAfricanTime();
                 await _context.SaveChangesAsync();
 
                 // Custom notifications depending on workflow track
-                if (req.IsPoRequired)
+                try
                 {
-                    await _notify.NotifyApproversAsync(id, "Finance", $"Invoice uploaded for corporate account PO Request #{id}. Added to monthly payment execution queue.");
+                    if (req.IsPoRequired)
+                    {
+                        await _notify.NotifyApproversAsync(id, "Finance", $"Invoice uploaded for corporate account PO Request #{id}. Added to monthly payment execution queue.");
+                    }
+                    else
+                    {
+                        await _notify.NotifyApproversAsync(id, "Finance", $"Verified Invoice uploaded for cash Request #{id}. Awaiting final compliance audit.");
+                    }
                 }
-                else
+                catch (Exception notifyEx)
                 {
-                    await _notify.NotifyApproversAsync(id, "Finance", $"Verified Invoice uploaded for cash Request #{id}. Awaiting final compliance audit.");
+                    System.Diagnostics.Debug.WriteLine($"WARNING: Notification email failed to send: {notifyEx.Message}");
                 }
 
                 return RedirectToPage("./MyRequests");
