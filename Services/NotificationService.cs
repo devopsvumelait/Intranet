@@ -72,6 +72,33 @@ namespace Intranet.Services
                 .Include(r => r.Requester)
                 .FirstOrDefaultAsync(r => r.Id == requestId);
 
+
+            usersInRole = usersInRole.Where(user =>
+            {
+                string email = user.Email?.ToLower() ?? "";
+
+                if (email == "sivashni.moodley@vumelait.co.za")
+                {
+                    // MD receives emails ONLY when the workflow targets the MD role 
+                    return targetRole.Equals("MD", StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (email == "verndell.khan@vumelait.co.za")
+                {
+                    // HOO receives emails ONLY when the target role is HOO
+                    return targetRole.Equals("HOO", StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (email == "sandika.sewnarain@vumelait.co.za")
+                {
+                    // Finance receives NO approval emails from this workflow
+                    return false;
+                }
+
+                // All other standard users in this role remain unaffected
+                return true;
+            }).ToList();
+
             string supplierName = "N/A";
             string requestType = request?.RequestType ?? "Standard";
             string quoteType = request?.QuoteType ?? "N/A";

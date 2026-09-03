@@ -139,6 +139,11 @@ namespace Intranet.Pages.Procurement
                     if (isHOS) allowedStatuses.Add("Pending_HOS");
                     if (isFinance) allowedStatuses.AddRange(new[] { "AcceptedWaitingOnFinance", "Awaiting_Payment", "PO_Payment_Queue", "PO_Upload", "Awaiting_Verification" });
 
+                    if (isHOO || isHOS || isFinance)
+                    {
+                        allowedStatuses.Add("Pending_MD");
+                    }
+
                     if (allowedStatuses.Any())
                     {
                         query = query.Where(r => allowedStatuses.Contains(r.Status) || r.RequesterId == userId);
@@ -338,7 +343,7 @@ namespace Intranet.Pages.Procurement
                 if (isMD) { }
                 else if (isFinance)
                 {
-                    query = query.Where(r => r.Status == "Awaiting_Payment" || r.Status == "PO_Payment_Queue" || r.Status == "PO_Upload" || r.Status == "PO_Issued" || r.Status == "Awaiting_Manager_Closure" || r.Status == "Awaiting_Verification" || r.Status == "Awaiting_Invoice" || r.Status == "Closed" || r.Status == "Rejected_Acknowledged");
+                    query = query.Where(r => r.Status == "Awaiting_Payment" || r.Status == "PO_Payment_Queue" || r.Status == "PO_Upload" || r.Status == "PO_Issued" || r.Status == "Awaiting_Manager_Closure" || r.Status == "Awaiting_Verification" || r.Status == "Awaiting_Invoice" || r.Status == "Closed" || r.Status == "Rejected_Acknowledged" || r.Status == "Pending_MD");
                 }
                 else if (isHOS)
                 {
@@ -346,11 +351,11 @@ namespace Intranet.Pages.Procurement
                 }
                 else if (isHOO)
                 {
-                    query = query.Where(r => r.Status == "Pending_HOO" || r.Status == "Awaiting_Payment" || r.Status == "PO_Payment_Queue" || r.Status == "PO_Upload" || r.Status == "PO_Issued" || r.Status == "Awaiting_Manager_Closure" || r.Status == "Awaiting_Verification" || r.Status == "Closed" || r.Status == "Rejected_Acknowledged");
+                    query = query.Where(r => r.Status == "Pending_HOO" || r.Status == "Pending_MD" || r.Status == "Awaiting_Payment" || r.Status == "PO_Payment_Queue" || r.Status == "PO_Upload" || r.Status == "PO_Issued" || r.Status == "Awaiting_Manager_Closure" || r.Status == "Awaiting_Verification" || r.Status == "Closed" || r.Status == "Rejected_Acknowledged");
                 }
                 else
                 {
-                    query = query.Where(r => r.RequesterId == userId || r.Status == "Pending_MD");
+                    query = query.Where(r => r.RequesterId == userId);
                 }
 
                 if (!string.IsNullOrEmpty(statusFilter))
@@ -451,7 +456,7 @@ namespace Intranet.Pages.Procurement
                     worksheet.Cell(1, 11).Value = "Department Type";
 
                     // Format Headers
-                    var headerRange = worksheet.Range("A1:H1");
+                    var headerRange = worksheet.Range("A1:K1");
                     headerRange.Style.Font.Bold = true;
                     headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#F8F9FA");
 
