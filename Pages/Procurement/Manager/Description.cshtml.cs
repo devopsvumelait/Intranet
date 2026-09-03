@@ -46,7 +46,7 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty]
         public string? SerializedSupportingDocs { get; set; }
 
-        public List<string> DepartmentOptions { get; set; } = new() { "EUC", "Networks", "Cabling", "ADHOC", "Head Office", "Interns" };
+        public List<string> DepartmentOptions { get; set; } = new() { "EUC Central", "EUC Regional", "Networks", "Cabling", "ADHOC", "Head Office", "Interns" };
         public List<string> QuoteTypeOptions { get; set; } = new() { "Accomodation", "Courier", "Flights", "Fuel", "Health And Safety", "Legal Fees", "Medicals", "Networking Expense", "PPE", "S&T", "Security Clearance", "Small Assets", "Staff Welfare", "Team Builds", "Telephone And Internet", "Tool Hire", "Training", "Vehicle Expense", "Vehicle Hire", "Office Expenses", "Materials" };
         public string SuggestedSupplierName { get; set; } = string.Empty;
 

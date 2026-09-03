@@ -38,7 +38,8 @@
                         <label class="form-label small fw-bold text-muted text-uppercase">Department</label>
                         <select name="DepartmentFilter" class="form-select shadow-sm">
                             <option value="">All</option>
-                            <option value="EUC" selected="@(Model.DepartmentFilter == "EUC")">EUC</option>
+                            <option value="EUC Central" selected="@(Model.DepartmentFilter == "EUC Central")">EUC Central</option>
+                            <option value="EUC Regional" selected="@(Model.DepartmentFilter == "EUC Regional")">EUC Regional</option>
                             <option value="Networks" selected="@(Model.DepartmentFilter == "Networks")">Networks</option>
                             <option value="Cabling" selected="@(Model.DepartmentFilter == "Cabling")">Cabling</option>
                             <option value="ADHOC" selected="@(Model.DepartmentFilter == "ADHOC")">ADHOC</option>
@@ -126,11 +127,7 @@
                     <tr>
                         <th class="ps-4">Req #</th>
                         <th>Supplier Name</th>
-                        @* <th>Details</th>
-                        @if (!User.IsInRole("Manager") || User.IsInRole("Finance") || User.IsInRole("MD") || User.IsInRole("HOO") || User.IsInRole("HOS"))
-                        {
-                            <th>Requester</th>
-                        } *@
+                        <th>Requester</th>
                         <th>Department</th>
                         <th>Request Type</th>
                         <th>Quote Type</th>                      
@@ -154,14 +151,10 @@
                         <tr>
                             <td class="ps-4 text-muted small">#@item.Id</td>
                             <td class="fw-bold">@(item.Quotes?.FirstOrDefault(q => q.IsSelected)?.SupplierName ?? "Unknown")</td>
-                           @* <td>
-                                <div class="fw-bold text-dark mb-0" style="font-size:0.95rem;">@item.Description</div>
-                                <div class="small text-muted" style="font-size:0.78rem;">Created: @item.CreatedAt?.ToString("dd MMM yyyy")</div>
+                            <td>
+                                <div class="fw-bold">@item.Requester.FirstName @item.Requester.Surname</div>
+                                <div class="small text-muted">Dept ID: @item.Requester.DepartmentId</div>
                             </td>
-                            @if (!User.IsInRole("Manager") || User.IsInRole("Finance") || User.IsInRole("MD") || User.IsInRole("HOO") || User.IsInRole("HOS"))
-                            {
-                                <td class="small">@item.Requester?.FirstName @item.Requester?.Surname</td>
-                            } *@
                             <td>
                                 <div class="badge bg-light text-dark border" style="max-width: 150px;">@item.DepartmentType</div>
                             </td>

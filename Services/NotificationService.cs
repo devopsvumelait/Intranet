@@ -67,9 +67,48 @@ namespace Intranet.Services
                 .ThenInclude(ur => ur.Role)
                 .Where(u => u.UserRoles.Any(ur => ur.Role.RoleName == targetRole))
                 .ToListAsync();
+            var request = await _context.Requests
+                .Include(r => r.Quotes)
+                .Include(r => r.Requester)
+                .FirstOrDefaultAsync(r => r.Id == requestId);
+
+            string supplierName = "N/A";
+            string requestType = request?.RequestType ?? "Standard";
+            string quoteType = request?.QuoteType ?? "N/A";
+            DateTime dateCreated = request?.CreatedAt ?? DateTime.UtcNow;
+
+            string createdByName = "N/A";
+            if (request?.Requester != null)
+            {
+                createdByName = $"{request.Requester.FirstName} {request.Requester.Surname}".Trim();
+                if (string.IsNullOrEmpty(createdByName)) createdByName = request.Requester.Email ?? "N/A";
+            }
+
+            var winningQuote = request?.Quotes?.FirstOrDefault(q => q.IsSelected);
+            if (winningQuote != null && !string.IsNullOrEmpty(winningQuote.SupplierName))
+            {
+                supplierName = winningQuote.SupplierName;
+            }
+
             foreach (var user in usersInRole)
             {
-                await AddToDatabaseAndEmail(user.Id, user.Email, requestId, "Action Required", message, "RoleAlert");
+                string recipientName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : "Valued User";
+                if (string.IsNullOrEmpty(recipientName)) recipientName = "Valued User";
+
+                await AddToDatabaseAndEmail(
+                    user.Id,
+                    user.Email,
+                    requestId,
+                    "Action Required",
+                    message,
+                    "RoleAlert",
+                    recipientName,
+                    supplierName,
+                    requestType,
+                    quoteType,
+                    dateCreated,
+                    createdByName
+                );
             }
             await _context.SaveChangesAsync();
         }
@@ -79,12 +118,73 @@ namespace Intranet.Services
             var user = await _context.Users.FindAsync(userId);
             if (user != null)
             {
-                await AddToDatabaseAndEmail(userId, user.Email, requestId, title, message, "DirectUpdate");
+                string recipientName = !string.IsNullOrEmpty(user.FirstName) ? user.FirstName : "Valued User";
+                if (string.IsNullOrEmpty(recipientName)) recipientName = "Valued User";
+
+                string supplierName = "N/A";
+                string requestType = "Standard";
+                string quoteType = "N/A";
+                DateTime dateCreated = DateTime.UtcNow;
+                string createdByName = "N/A";
+
+                if (requestId.HasValue)
+                {
+                    var request = await _context.Requests
+                        .Include(r => r.Quotes)
+                        .Include(r => r.Requester)
+                        .FirstOrDefaultAsync(r => r.Id == requestId.Value);
+
+                    if (request != null)
+                    {
+                        requestType = request.RequestType ?? "Standard";
+                        quoteType = request.QuoteType ?? "N/A";
+                        dateCreated = request.CreatedAt ?? DateTime.UtcNow;
+
+                        if (request.Requester != null)
+                        {
+                            createdByName = $"{request.Requester.FirstName} {request.Requester.Surname}".Trim();
+                            if (string.IsNullOrEmpty(createdByName)) createdByName = request.Requester.Email ?? "N/A";
+                        }
+
+                        var winningQuote = request.Quotes?.FirstOrDefault(q => q.IsSelected);
+                        if (winningQuote != null && !string.IsNullOrEmpty(winningQuote.SupplierName))
+                        {
+                            supplierName = winningQuote.SupplierName;
+                        }
+                    }
+                }
+
+                await AddToDatabaseAndEmail(
+                    userId,
+                    user.Email,
+                    requestId,
+                    title,
+                    message,
+                    "DirectUpdate",
+                    recipientName,
+                    supplierName,
+                    requestType,
+                    quoteType,
+                    dateCreated,
+                    createdByName
+                );
                 await _context.SaveChangesAsync();
             }
         }
 
-        private async Task AddToDatabaseAndEmail(Guid userId, string email, int? requestId, string title, string message, string type)
+        private async Task AddToDatabaseAndEmail(
+            Guid userId,
+            string email,
+            int? requestId,
+            string title,
+            string message,
+            string type,
+            string recipientName = "Valued User",
+            string supplierName = "N/A",
+            string requestType = "Standard",
+            string quoteType = "N/A",
+            DateTime? dateCreated = null,
+            string createdByName = "N/A")
         {
             _context.Notifications.Add(new Notification
             {
@@ -96,11 +196,22 @@ namespace Intranet.Services
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false
             });
-            await SendEmailAsync(email, $"Procurement: {title}", message);
+
+            await SendEmailAsync(email, $"Procurement: {title}", message, requestId, recipientName, supplierName, requestType, quoteType, dateCreated, createdByName);
         }
 
-       
-        private async Task SendEmailAsync(string email, string subject, string body)
+
+        private async Task SendEmailAsync(
+            string email,
+            string subject,
+            string body,
+            int? requestId = null,
+            string recipientName = "Valued User",
+            string supplierName = "N/A",
+            string requestType = "Standard",
+            string quoteType = "N/A",
+            DateTime? dateCreated = null,
+            string createdByName = "N/A")
         {
             try
             {
@@ -109,13 +220,40 @@ namespace Intranet.Services
                 message.To.Add(new MailboxAddress("", email));
                 message.Subject = subject;
 
-                string fullBodyWithLink = $"{body}<br><br>Login to Vumela Procurement: <a href='{LoginUrl}'>{LoginUrl}</a>";
-                string plainTextWithLink = $"{body}\n\nLogin to Vumela Procurement: {LoginUrl}";
+                string displayRequestId = requestId.HasValue ? $"#{requestId.Value}" : "N/A";
+                string formattedDate = dateCreated.HasValue ? dateCreated.Value.ToString("yyyy-MM-dd HH:mm") : DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm");
+
+                // Rich HTML Email format tailored to the user and procurement details
+                string htmlBody = $@"
+                    <div style='font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'>
+                        <h2 style='color: #004080; margin-top: 0;'>Vumela Procurement Notification</h2>
+                        <p>Hello <strong>{recipientName}</strong>,</p>
+                        <p style='background-color: #f9f9f9; padding: 12px; border-left: 4px solid #004080; border-radius: 4px;'>{body}</p>
+                        
+                        {(requestId.HasValue ? $@"
+                        <table style='width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px;'>
+                            <tr style='background-color: #f2f2f2;'><th colspan='2' style='padding: 8px; text-align: left; border: 1px solid #ddd;'>Request Details</th></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd; width: 35%;'><strong>Request ID:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{displayRequestId}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Created By:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{createdByName}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Supplier:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{supplierName}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Request Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{requestType}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Quote Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{quoteType}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Created At:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{formattedDate}</td></tr>
+                        </table>" : "")}
+
+                        <p style='margin-top: 20px;'>
+                            <a href='{LoginUrl}' style='background-color: #004080; color: white; padding: 10px 18px; text-decoration: none; border-radius: 5px; display: inline-block;'>Login to Vumela Procurement</a>
+                        </p>
+                        <hr style='border: none; border-top: 1px solid #eee; margin: 20px 0;'>
+                        <p style='font-size: 12px; color: #777;'>This is an automated system message from Vumela Procurement. Please do not reply directly to this email.</p>
+                    </div>";
+
+                string plainTextBody = $"Hello {recipientName},\n\n{body}\n\nRequest ID: {displayRequestId}\nSupplier: {supplierName}\nRequest Type: {requestType}\nQuote Type: {quoteType}\n\nLogin to Vumela Procurement: {LoginUrl}";
 
                 var bodyBuilder = new BodyBuilder
                 {
-                    TextBody = plainTextWithLink,
-                    HtmlBody = $"<div style='font-family: Arial, sans-serif; color: #333; line-height: 1.5;'><p>{fullBodyWithLink}</p></div>"
+                    TextBody = plainTextBody,
+                    HtmlBody = htmlBody
                 };
                 message.Body = bodyBuilder.ToMessageBody();
 
@@ -129,16 +267,14 @@ namespace Intranet.Services
             }
             catch (Exception ex)
             {
-               
                 Console.WriteLine($"========================================");
                 Console.WriteLine($"GOOGLE SMTP ERROR: {ex.Message}");
                 Console.WriteLine($"STACK TRACE: {ex.StackTrace}");
                 Console.WriteLine($"========================================");
-                
             }
         }
 
-        
+
         public async Task SendReportEmailAsync(string email, byte[] excelBytes, string fileName)
         {
             try
@@ -168,11 +304,10 @@ namespace Intranet.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Google SMTP Report Error: {ex.Message}");
-                
             }
         }
 
-        
+
         public async Task SendDualAttachmentEmailAsync(string email, byte[] reportBytes, string reportName, byte[] registerBytes, string registerName)
         {
             try
@@ -204,7 +339,6 @@ namespace Intranet.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Google SMTP Dual Error: {ex.Message}");
-                
             }
         }
     }
