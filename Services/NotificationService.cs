@@ -101,6 +101,7 @@ namespace Intranet.Services
             }).ToList();
 
             string supplierName = "N/A";
+            string quoteAmount = "N/A";
             string requestType = request?.RequestType ?? "Standard";
             string quoteType = request?.QuoteType ?? "N/A";
             DateTime dateCreated = request?.CreatedAt ?? DateTime.UtcNow;
@@ -113,9 +114,14 @@ namespace Intranet.Services
             }
 
             var winningQuote = request?.Quotes?.FirstOrDefault(q => q.IsSelected);
-            if (winningQuote != null && !string.IsNullOrEmpty(winningQuote.SupplierName))
+            if (winningQuote != null)
             {
-                supplierName = winningQuote.SupplierName;
+                if (!string.IsNullOrEmpty(winningQuote.SupplierName))
+                {
+                    supplierName = winningQuote.SupplierName;
+                }
+                // Adjust property name if your Quote model uses 'Amount' or another property instead of 'Price'
+                quoteAmount = winningQuote.Price > 0 ? $"R {winningQuote.Price:N2}" : "N/A";
             }
 
             foreach (var user in usersInRole)
@@ -132,6 +138,7 @@ namespace Intranet.Services
                     "RoleAlert",
                     recipientName,
                     supplierName,
+                    quoteAmount,
                     requestType,
                     quoteType,
                     dateCreated,
@@ -150,6 +157,7 @@ namespace Intranet.Services
                 if (string.IsNullOrEmpty(recipientName)) recipientName = "Valued User";
 
                 string supplierName = "N/A";
+                string quoteAmount = "N/A";
                 string requestType = "Standard";
                 string quoteType = "N/A";
                 DateTime dateCreated = DateTime.UtcNow;
@@ -175,9 +183,13 @@ namespace Intranet.Services
                         }
 
                         var winningQuote = request.Quotes?.FirstOrDefault(q => q.IsSelected);
-                        if (winningQuote != null && !string.IsNullOrEmpty(winningQuote.SupplierName))
+                        if (winningQuote != null)
                         {
-                            supplierName = winningQuote.SupplierName;
+                            if (!string.IsNullOrEmpty(winningQuote.SupplierName))
+                            {
+                                supplierName = winningQuote.SupplierName;
+                            }
+                            quoteAmount = winningQuote.Price > 0 ? $"R {winningQuote.Price:N2}" : "N/A";
                         }
                     }
                 }
@@ -191,6 +203,7 @@ namespace Intranet.Services
                     "DirectUpdate",
                     recipientName,
                     supplierName,
+                    quoteAmount,
                     requestType,
                     quoteType,
                     dateCreated,
@@ -209,6 +222,7 @@ namespace Intranet.Services
             string type,
             string recipientName = "Valued User",
             string supplierName = "N/A",
+            string quoteAmount = "N/A",
             string requestType = "Standard",
             string quoteType = "N/A",
             DateTime? dateCreated = null,
@@ -225,7 +239,7 @@ namespace Intranet.Services
                 IsRead = false
             });
 
-            await SendEmailAsync(email, $"Procurement: {title}", message, requestId, recipientName, supplierName, requestType, quoteType, dateCreated, createdByName);
+            await SendEmailAsync(email, $"Procurement: {title}", message, requestId, recipientName, supplierName, quoteAmount, requestType, quoteType, dateCreated, createdByName);
         }
 
 
@@ -236,6 +250,7 @@ namespace Intranet.Services
             int? requestId = null,
             string recipientName = "Valued User",
             string supplierName = "N/A",
+            string quoteAmount = "N/A",
             string requestType = "Standard",
             string quoteType = "N/A",
             DateTime? dateCreated = null,
@@ -264,6 +279,7 @@ namespace Intranet.Services
                             <tr><td style='padding: 8px; border: 1px solid #ddd; width: 35%;'><strong>Request ID:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{displayRequestId}</td></tr>
                             <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Created By:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{createdByName}</td></tr>
                             <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Supplier:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{supplierName}</td></tr>
+                            <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Quote Amount:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{quoteAmount}</td></tr>
                             <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Request Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{requestType}</td></tr>
                             <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Quote Type:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{quoteType}</td></tr>
                             <tr><td style='padding: 8px; border: 1px solid #ddd;'><strong>Created At:</strong></td><td style='padding: 8px; border: 1px solid #ddd;'>{formattedDate}</td></tr>

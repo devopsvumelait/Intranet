@@ -59,6 +59,8 @@ namespace Intranet.Pages.Procurement.Manager
         [BindProperty]
         public string RequestType { get; set; } = "Normal";
 
+        
+
         [BindProperty] public string DepartmentType { get; set; } = "None";
         [BindProperty] public string CustomerName { get; set; } = "None";
         [BindProperty] public string QuoteType { get; set; } = "None";

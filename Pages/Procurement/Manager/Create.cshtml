@@ -130,6 +130,14 @@
                                 </select>
                             </div>
 
+                            <div class="mb-4 p-3 border rounded bg-light shadow-sm" id="bankDetailsConfirmationContainer">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="bankDetailsCheck">
+                                    <label class="form-check-label fw-bold text-dark small" for="bankDetailsCheck">
+                                        I confirm that I have included/uploaded the banking details for the submitted quote (if not, please upload them in the supporting docs area)
+                                    </label>
+                                </div>
+                            </div>
                          
                             
                             <div class="mb-4">
@@ -274,6 +282,45 @@
         const futureDateContainer = document.getElementById('futureDateContainer');
         const futureDateInput = document.getElementById('futureDateInput');
 
+        const requestTypeSelect = document.getElementById('requestTypeSelect');
+        const bankDetailsContainer = document.getElementById('bankDetailsConfirmationContainer');
+        const bankDetailsCheck = document.getElementById('bankDetailsCheck');
+
+        function updateSubmitButtonState() {
+            if (!submitBtn) return;
+            const totalCount = filesArray.length + dbFilesArray.length;
+            let isValid = totalCount > 0;
+
+            // Only enforce the checkbox if Normal is selected AND the container is actually visible
+            if (requestTypeSelect && requestTypeSelect.value === "Normal") {
+                if (bankDetailsCheck && !bankDetailsCheck.checked) {
+                    isValid = false;
+                }
+            }
+
+            submitBtn.disabled = !isValid;
+        }
+
+        function toggleBankDetailsVisibility() {
+            if (requestTypeSelect && bankDetailsContainer && bankDetailsCheck) {
+                // Check value case-insensitively just in case
+                const val = requestTypeSelect.value ? requestTypeSelect.value.trim() : "";
+
+                if (val === "Normal") {
+                    bankDetailsContainer.classList.remove('d-none'); // Using Bootstrap utility class for robust hiding/showing
+                    bankDetailsContainer.style.display = "block";
+                    bankDetailsCheck.setAttribute('required', 'required');
+                    bankDetailsCheck.checked = false;
+                } else {
+                    bankDetailsContainer.classList.add('d-none');
+                    bankDetailsContainer.style.display = "none";
+                    bankDetailsCheck.removeAttribute('required');
+                    bankDetailsCheck.checked = true; // Auto-satisfy so it doesn't block submission when hidden
+                }
+                updateSubmitButtonState();
+            }
+        }
+
         function toggleDateVisibility() {
             if (paymentTimingInput && futureDateContainer && futureDateInput) {
                 if (paymentTimingInput.value === "Future") {
@@ -289,8 +336,17 @@
 
         document.addEventListener("DOMContentLoaded", function () {
             toggleDateVisibility();
+            toggleBankDetailsVisibility();
+
             if (paymentTimingInput) {
                 paymentTimingInput.addEventListener('change', toggleDateVisibility);
+            }
+            if (requestTypeSelect) {
+                requestTypeSelect.addEventListener('change', toggleBankDetailsVisibility);
+            }
+
+            if (bankDetailsCheck) {
+                bankDetailsCheck.addEventListener('change', updateSubmitButtonState);
             }
 
             if (isEditMode && serializedInput && serializedInput.value) {
@@ -334,7 +390,7 @@
             });
 
                     const poToggle = document.getElementById('poToggleSwitch');
-            const requestTypeSelect = document.getElementById('requestTypeSelect');
+           @* const requestTypeSelect = document.getElementById('requestTypeSelect'); *@
 
             if (poToggle && requestTypeSelect) {
                 poToggle.addEventListener('change', function () {
