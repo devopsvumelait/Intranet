@@ -33,6 +33,8 @@ namespace Intranet.Pages.Procurement.Manager
         public Document? GetInvoice { get; set; }
 
         public Document? GetPO { get; set; }
+
+        public Payment? PaymentRecord { get; set; }
         public List<Document> SupersededInvoices { get; set; } = new();
 
         public List<Document> SupportingDocuments { get; set; } = new();
@@ -84,6 +86,11 @@ namespace Intranet.Pages.Procurement.Manager
                     .Where(d => d.RequestId == id && d.DocType == "Supporting_Document")
                     .OrderByDescending(d => d.UploadedAt)
                     .ToListAsync();
+
+                PaymentRecord = await _context.Payments
+                    .Where(p => p.RequestId == id)
+                    .OrderByDescending(p => p.PaymentDate)
+                    .FirstOrDefaultAsync();
 
                 if (RequestData.Quotes != null)
                 {

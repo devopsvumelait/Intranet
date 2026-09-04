@@ -110,46 +110,38 @@ namespace Intranet.Services
                 mimeTypes.Add(pop.ContentType);
             }
 
-            var prompt = $@"ACT AS A STRICT AUDITOR. Compare the attached Invoice against these Approved Details:
-                    - Approved Supplier Reference: {selectedQuote.SupplierName}
-                    - Approved Amount: {selectedQuote.Price}
-                    
-                    CRITICAL RULES:
-                    1. The 'Approved Supplier Reference' provided above is derived from an internal quote filename. 
-                       Analyze the Invoice's issuer/vendor name and determine if it matches or closely resembles the core identity of the filename reference. 
-                       (e.g., If the reference is 'Amazon_Server_Specs' and the invoice is from 'Amazon Web Services', this is a MATCH).
-                       If the identity does not match, set IsValid to false.
-                    2. If the Total/Grand Total on the invoice is not exactly {selectedQuote.Price}, set IsValid to false.
-                    3. If the document is not an Invoice or Tax Invoice, set IsValid to false.
-                    4. Provide a clear reason in 'ComparisonSummary' if IsValid is false.
+            var prompt = $@"ACT AS A CORPORATE AUDITOR. Compare the attached Invoice against these Approved Details:
+    - Approved Supplier Reference: {selectedQuote.SupplierName}
+    - Approved Amount: {selectedQuote.Price}
+    
+    CRITICAL RULES:
+    1. The 'Approved Supplier Reference' is derived from an internal quote filename. Analyze the Invoice's issuer/vendor name. Be flexible with minor pluralization, spelling differences (e.g., 'Expert' vs 'Experts'), spacing, punctuation, or corporate suffixes (e.g., 'Pty Ltd', 'Inc'). If the core business identity matches, consider it a MATCH.
+    2. If the Total/Grand Total on the invoice matches or is within a negligible cent tolerance of {selectedQuote.Price}, allow it.
+    3. If the document is an Invoice or Tax Invoice, proceed.
+    4. Provide a clear reason in 'ComparisonSummary' if IsValid is false.
 
-                    Respond ONLY in JSON: {{ ""IsValid"": bool, ""ComparisonSummary"": ""string"" }}";
+    Respond ONLY in JSON: {{ ""IsValid"": bool, ""ComparisonSummary"": ""string"" }}";
+
+            var responseJson = await SendToGeminiMultimodalAsync(prompt, base64Datas.ToArray(), mimeTypes.ToArray(), forceJson: true);
 
             try
             {
-                var responseJson = await SendToGeminiMultimodalAsync(prompt, base64Datas.ToArray(), mimeTypes.ToArray(), forceJson: true);
+                int start = responseJson.IndexOf('{');
+                int end = responseJson.LastIndexOf('}');
 
-                if (responseJson.StartsWith("```"))
+                if (start == -1 || end == -1)
                 {
-                    responseJson = responseJson.Replace("```json", "").Replace("```", "").Trim();
+                    return new ComplianceResult { IsValid = false, ComparisonSummary = "AI did not return a valid JSON object." };
                 }
 
-                var result = JsonSerializer.Deserialize<ComplianceResult>(responseJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                string json = responseJson.Substring(start, end - start + 1);
+                var result = JsonSerializer.Deserialize<ComplianceResult>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                if (result == null)
-                {
-                    return new ComplianceResult { IsValid = false, ComparisonSummary = "The verification engine returned an empty result." };
-                }
-
-                return result;
+                return result ?? new ComplianceResult { IsValid = false, ComparisonSummary = "Failed to parse JSON structure." };
             }
             catch (Exception ex)
             {
-                return new ComplianceResult
-                {
-                    IsValid = false,
-                    ComparisonSummary = $"Verification system error: {ex.Message}. Please try again."
-                };
+                return new ComplianceResult { IsValid = false, ComparisonSummary = $"Parsing error: {ex.Message}" };
             }
         }
 

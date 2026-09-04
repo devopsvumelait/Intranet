@@ -92,8 +92,9 @@ namespace Intranet.Services
                 if (email == "sandika.sewnarain@vumelait.co.za")
                 {
                     // Finance receives NO approval emails from this workflow
-                    return false;
+                    return targetRole.Equals("Finance", StringComparison.OrdinalIgnoreCase);
                 }
+            
 
                 // All other standard users in this role remain unaffected
                 return true;

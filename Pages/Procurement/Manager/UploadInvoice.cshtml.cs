@@ -42,7 +42,7 @@ namespace Intranet.Pages.Procurement.Manager
         private async Task<Request?> FetchFullRequestAsync(int id)
         {
             return await _context.Requests
-                .Include(r => r.Quotes.Where(q => q.IsSelected))
+                .Include(r => r.Quotes)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 

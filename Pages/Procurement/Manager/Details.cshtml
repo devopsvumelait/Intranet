@@ -156,13 +156,23 @@
                             @if (Model.ProofOfPayment != null)
                             {
                                 <div class="col-sm-6">
-                                    <div class="border rounded p-3 d-flex align-items-center bg-light">
+                                    <div class="border rounded p-3 d-flex flex-column bg-light">
+                                        <div class="d-flex align-items-center">
                                         <i class="bi bi-file-earmark-check text-success fs-3 me-3"></i>
                                         <div class="flex-grow-1 overflow-hidden">
                                             <div class="small fw-bold text-truncate">Proof of Payment (POP)</div>
                                             <div class="text-muted small" style="font-size:0.75rem;">Uploaded: @Model.ProofOfPayment.UploadedAt?.ToString("yyyy-MM-dd")</div>
                                         </div>
                                         <a href="@Model.ProofOfPayment.BlobUrl" target="_blank" class="btn btn-sm btn-outline-dark"><i class="bi bi-box-arrow-up-right"></i></a>
+                                    </div>
+
+                                    @if (!string.IsNullOrEmpty(Model.PaymentRecord?.Comments))
+                                    {
+                                        <div class="mt-2 pt-2 border-top small text-dark">
+                                            <span class="fw-bold text-muted text-uppercase" style="font-size: 0.7rem;"><i class="bi bi-chat-left-text me-1"></i> Finance Comment:</span>
+                                            <p class="mb-0 mt-1 fst-italic">@Model.PaymentRecord.Comments</p>
+                                        </div>
+                                    }
                                     </div>
                                 </div>
                             }

@@ -23,6 +23,7 @@ public partial class Payment
 
     public string Status { get; set; } = null!;
 
+    public string? Comments { get; set; }
     public virtual User PaidBy { get; set; } = null!;
 
     public virtual Request Request { get; set; } = null!;

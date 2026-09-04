@@ -165,6 +165,12 @@
                             </p>
                         </div>
 
+                        <div class="mb-4">
+                            <label class="form-label small">Finance Comments / Notes <span class="text-white-50">(Optional)</span></label>
+                            <textarea asp-for="FinanceComment" class="form-control bg-secondary text-white border-0" rows="3" placeholder="Add any remarks regarding this transaction or document..."></textarea>
+                            <span asp-validation-for="FinanceComment" class="text-danger small"></span>
+                        </div>
+
                         <button type="submit" class="btn btn-success w-100 py-2 fw-bold shadow-sm">
                             @if (isPO)
                             {

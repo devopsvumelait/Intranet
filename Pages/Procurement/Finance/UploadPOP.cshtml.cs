@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -43,6 +44,9 @@ namespace Intranet.Pages.Procurement.Finance
         [BindProperty] public IFormFile PopFile { get; set; } = null!;
         [BindProperty] public string ReferenceNumber { get; set; } = "";
         [BindProperty] public string PaymentMethod { get; set; } = "EFT";
+
+        [BindProperty] public string FinanceComment { get; set; } = "";
+
 
         public List<Document> SupportingDocuments { get; set; } = new();
 
@@ -122,10 +126,12 @@ namespace Intranet.Pages.Procurement.Finance
 
             try
             {
-                var req = await _context.Requests.FindAsync(id);
+                var req = await _context.Requests
+                    .Include(r => r.Quotes)
+                    .FirstOrDefaultAsync(m => m.Id == id);
                 if (req == null) return NotFound();
 
-                var selectedQuote = RequestData.Quotes.FirstOrDefault(q => q.IsSelected);
+                var selectedQuote = req.Quotes.FirstOrDefault(q => q.IsSelected);
                 string approvedSupplier = selectedQuote?.SupplierName ?? "";
 
                 // Logic Flags
@@ -167,7 +173,8 @@ namespace Intranet.Pages.Procurement.Finance
                         PaymentMethod = PaymentMethod,
                         ReferenceNumber = ReferenceNumber,
                         PopBlobUrl = blobUrl,
-                        Status = "Completed"
+                        Status = "Completed",
+                        Comments = FinanceComment
                     });
                 }
 
